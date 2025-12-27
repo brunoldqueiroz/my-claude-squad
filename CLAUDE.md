@@ -8,7 +8,9 @@ A **pure MCP-based** orchestration system with 17 specialized AI agents for Data
 
 **Architecture**: All functionality exposed via MCP tools and resources. No Claude Code plugin layer.
 
-## Development Commands
+## Installation
+
+### Option 1: Development Mode (in project directory)
 
 ```bash
 uv sync                              # Install dependencies
@@ -17,6 +19,31 @@ uv sync --extra semantic             # Install semantic memory (sentence-transfo
 uv run squad-mcp                     # Run MCP server directly
 claude mcp add squad uv run squad-mcp # Register with Claude Code
 ```
+
+### Option 2: Global Tool Install (recommended for daily use)
+
+Install as a globally available command:
+
+```bash
+uv tool install .                    # Base install
+uv tool install ".[semantic]"        # With semantic memory
+uv tool install . --force            # Reinstall/update
+```
+
+Register with Claude Code (requires `SQUAD_ROOT` since resources aren't bundled):
+
+```bash
+claude mcp add squad -e SQUAD_ROOT=/path/to/my-claude-squad -- squad-mcp
+```
+
+Manage the tool:
+
+```bash
+uv tool list                         # List installed tools
+uv tool uninstall my-claude-squad    # Remove
+```
+
+**Why `SQUAD_ROOT`?** The Python package installs to `~/.local/share/uv/tools/`, but `agents/`, `skills/`, `commands/` markdown files stay in the project directory. `SQUAD_ROOT` tells the MCP server where to find them.
 
 ### Testing
 
