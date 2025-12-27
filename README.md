@@ -1,133 +1,190 @@
 # My Claude Squad
 
-A comprehensive Claude Code plugin containing 19 specialized AI agents for Data Engineering, AI Engineering, and Plugin Development workflows.
+A pure MCP-based multi-agent orchestration system with 17 specialized AI agents for Data Engineering, AI Engineering, and Plugin Development.
 
-## Overview
+## Features
 
-This plugin provides a team of AI specialists that work together to help with data engineering tasks. The **Planner Orchestrator** can decompose complex tasks and coordinate multiple agents to work in parallel.
+- **17 Specialized Agents** across 4 domains (Data Engineering, AI Engineering, Plugin Development, Orchestration)
+- **64 MCP Tools** for orchestration, scheduling, sessions, hooks, semantic memory, and more
+- **6 MCP Resources** for accessing agent, skill, and command definitions
+- **4 Swarm Topologies** (hierarchical, mesh, ring, star) for multi-agent coordination
+- **Persistent Sessions** with pause/resume support
+- **Semantic Memory** with vector search using sentence-transformers
+- **Task Dependencies** with DAG scheduling and circuit breaker patterns
 
-## Key Features
+## Quick Start
 
-### Research-First Protocol
-All agents verify their knowledge before acting:
-- Use **Context7** for up-to-date library documentation
-- Use **Exa** for code examples and best practices
-- Declare uncertainty and ask when critical decisions are needed
-- Validate syntax against current documentation
+```bash
+# Install dependencies
+uv sync
 
-### Context Resilience
-Agents maintain effectiveness after context compaction:
-- Structured output with file paths and summaries
-- Checkpoint patterns for multi-phase work
-- Recovery protocols for resuming after context loss
-- File-based artifacts instead of conversation-only state
+# Register MCP server with Claude Code
+claude mcp add squad uv run squad-mcp
 
-### Memory Integration
-Agents leverage multiple memory tiers:
-- **Session Memory**: TodoWrite for task tracking
-- **Project Memory**: CLAUDE.md and codebase patterns
-- **Skills Memory**: Reference established patterns
-- **External Knowledge**: Context7 and Exa for current docs
+# Start Claude Code
+claude
+```
+
+Then try:
+```
+You: What agents are available?
+→ Uses mcp__squad__list_agents
+
+You: Create a data pipeline from S3 to Snowflake with Airflow
+→ Uses mcp__squad__decompose_task to break into subtasks
+```
+
+## Architecture
+
+```
+my-claude-squad/
+├── orchestrator/           # MCP Server (Python/FastMCP)
+│   ├── server.py           # 64 MCP tools + 6 MCP resources
+│   ├── coordinator.py      # Task routing, decomposition
+│   ├── agent_registry.py   # Loads agents/*.md
+│   ├── memory.py           # DuckDB persistence
+│   ├── scheduler.py        # Task dependencies, CircuitBreaker
+│   ├── topology.py         # Swarm topologies
+│   ├── session.py          # Persistent sessions
+│   ├── hooks.py            # Pre/post operation hooks
+│   └── semantic_memory.py  # Vector embeddings
+├── agents/                 # 17 specialist agents (markdown)
+├── skills/                 # 10 knowledge skills
+├── commands/               # 30 command templates
+└── .swarm/                 # Persistent state (DuckDB)
+```
 
 ## Agents
 
-### Data Engineering Agents
-| Agent | Specialty | Color |
-|-------|-----------|-------|
-| `planner-orchestrator` | Task decomposition & parallel management | blue |
-| `python-developer` | Python for data engineering | green |
-| `sql-specialist` | General SQL expertise | cyan |
-| `snowflake-specialist` | Snowflake platform | blue |
-| `spark-specialist` | Apache Spark/PySpark | orange |
-| `airflow-specialist` | Apache Airflow DAGs | yellow |
-| `aws-specialist` | AWS cloud architecture | orange |
-| `sql-server-specialist` | Microsoft SQL Server | red |
-| `container-specialist` | Docker/containers | purple |
-| `kubernetes-specialist` | Kubernetes orchestration | magenta |
-| `git-commit-writer` | Conventional commits | gray |
-| `documenter` | Technical documentation | cyan |
-
-### AI Engineering Agents
-| Agent | Specialty | Color |
-|-------|-----------|-------|
-| `ai-orchestrator` | AI project coordination & planning | magenta |
-| `rag-specialist` | RAG, vector databases, embeddings | purple |
-| `agent-framework-specialist` | LangGraph, CrewAI, AutoGen | orange |
-| `llm-specialist` | LLM integration, Ollama, prompts | green |
-| `automation-specialist` | n8n, Dify, MCP servers, chatbots | yellow |
-
-### Plugin Development Agents
-| Agent | Specialty | Color |
-|-------|-----------|-------|
-| `plugin-architect` | Plugin extension design & domain planning | pink |
-| `plugin-developer` | Agent/skill/command creation | white |
-
-## Commands
-
 ### Orchestration
-- `/plan-task` - Analyze a task and create execution plan with agent assignments
-- `/execute-squad` - Execute the planned task using assigned agents
-- `/status` - Show current task status and agent progress
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `squad-orchestrator` | opus | Complex task decomposition, multi-agent coordination |
 
 ### Data Engineering
-- `/create-pipeline` - Generate data pipeline boilerplate (ETL/ELT)
-- `/optimize-query` - Analyze and optimize SQL query
-- `/analyze-data` - Profile and analyze dataset
-
-### DevOps
-- `/deploy` - Generate deployment configuration
-- `/containerize` - Create Dockerfile for project
-- `/k8s-manifest` - Generate Kubernetes manifests
-
-### Documentation
-- `/doc-pipeline` - Document a data pipeline
-- `/doc-api` - Generate API documentation
-- `/commit` - Generate conventional commit message
-
-### Research
-- `/lookup-docs` - Look up documentation for any library using Context7 and Exa
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `python-developer` | sonnet | Python ETL, APIs, testing |
+| `sql-specialist` | sonnet | SQL queries, optimization, data modeling |
+| `spark-specialist` | sonnet | PySpark, Spark SQL, Delta Lake |
+| `snowflake-specialist` | sonnet | Snowflake platform |
+| `airflow-specialist` | sonnet | Airflow DAGs |
+| `aws-specialist` | sonnet | AWS cloud, data lakes |
+| `sql-server-specialist` | sonnet | T-SQL, SSIS |
+| `container-specialist` | sonnet | Docker, multi-stage builds |
+| `kubernetes-specialist` | sonnet | K8s, Helm |
+| `documenter` | sonnet | Technical documentation |
+| `git-commit-writer` | haiku | Conventional commits |
 
 ### AI Engineering
-- `/create-rag` - Generate RAG application boilerplate
-- `/create-agent` - Generate multi-agent system structure
-- `/create-chatbot` - Generate chatbot application
-- `/create-mcp-server` - Generate MCP server template
-- `/optimize-rag` - Analyze and optimize RAG pipeline
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `rag-specialist` | sonnet | RAG systems, vector databases |
+| `agent-framework-specialist` | sonnet | LangGraph, CrewAI, AutoGen |
+| `llm-specialist` | sonnet | LLM integration, prompts |
+| `automation-specialist` | sonnet | n8n, Dify, MCP servers |
 
 ### Plugin Development
-- `/new-agent` - Create a new specialist agent
-- `/new-skill` - Create a new SKILL.md reference
-- `/new-command` - Create a new slash command
-- `/list-agents` - List all agents with models and descriptions
-- `/list-commands` - List all commands by category
-- `/validate-plugin` - Validate plugin structure and files
-- `/update-readme` - Regenerate README from current state
-- `/plugin-status` - Show plugin statistics and health
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `plugin-developer` | sonnet | Create agents, skills, commands |
 
-## Skills
+## MCP Tools (64)
 
-The plugin includes reference skills for agents:
+| Category | Tools | Description |
+|----------|-------|-------------|
+| Agent Management | 5 | list_agents, route_task, spawn_agent, decompose_task, submit_decomposition |
+| Memory | 2 | memory_store, memory_query |
+| Storage | 2 | get_storage_stats, cleanup_storage |
+| Health & Status | 6 | swarm_status, complete_run, get_health, get_metrics, get_agent_health, set_agent_status |
+| Task Scheduling | 6 | create_dependent_task, get_task_graph, get_ready_tasks, complete_scheduled_task, execute_workflow, clear_workflow |
+| Events | 2 | get_events, emit_event |
+| Swarm Topology | 6 | create_swarm, list_swarms, get_swarm, delete_swarm, get_swarm_delegation, create_swarm_workflow |
+| Sessions | 12 | create_session, pause_session, resume_session, and more |
+| Hooks | 8 | list_hooks, enable_hook, disable_hook, and more |
+| Semantic Memory | 6 | semantic_store, semantic_search, semantic_stats, and more |
+| Commands | 9 | create_pipeline, analyze_query, create_dockerfile, scaffold_rag, and more |
 
-- **research-patterns/** - Research-first protocols, uncertainty handling, Context7/Exa usage
-- **data-pipeline-patterns/** - ETL/ELT patterns, batch vs streaming, idempotency
-- **sql-optimization/** - Query optimization, index strategies, anti-patterns
-- **cloud-architecture/** - Data lake, lakehouse, serverless patterns
-- **testing-strategies/** - Unit testing, integration testing, data quality
-- **documentation-templates/** - Pipeline docs, data dictionaries, ADRs
-- **code-review-standards/** - Python, SQL, infrastructure checklists
-- **ai-engineering-patterns/** - RAG, multi-agent, LLM integration, MCP patterns
-- **plugin-development-patterns/** - Agent/skill/command templates, plugin conventions
+## MCP Resources (6)
+
+| URI | Description |
+|-----|-------------|
+| `squad://agents` | List all agents |
+| `squad://agents/{name}` | Get agent definition |
+| `squad://skills` | List all skills |
+| `squad://skills/{name}` | Get skill content |
+| `squad://commands` | List all commands |
+| `squad://commands/{cat}/{name}` | Get command content |
+
+## Swarm Topologies
+
+Create multi-agent swarms with different coordination patterns:
+
+| Topology | Pattern | Use Case |
+|----------|---------|----------|
+| **Hierarchical** | Queen-Worker | Central coordination |
+| **Mesh** | Peer-to-Peer | Democratic decisions |
+| **Ring** | Pipeline A→B→C | Sequential processing |
+| **Star** | Hub-Spoke | Specialized workers |
+
+```python
+# Example: Create a ring pipeline
+create_swarm(
+    name="ETL Pipeline",
+    topology="ring",
+    agents=["aws-specialist", "spark-specialist", "snowflake-specialist"]
+)
+```
+
+## Sessions
+
+Create persistent, resumable workflows:
+
+```python
+# Create session
+create_session(
+    name="Data Migration",
+    tasks=[
+        {"description": "Extract from S3", "agent_name": "aws-specialist"},
+        {"description": "Transform data", "agent_name": "spark-specialist"},
+        {"description": "Load to Snowflake", "agent_name": "snowflake-specialist"}
+    ]
+)
+
+# Pause/resume anytime
+pause_session(session_id)
+resume_session(session_id)
+```
+
+## Semantic Memory
+
+Store and search by meaning:
+
+```python
+# Store with embedding
+semantic_store("pattern1", "Use incremental loads for fact tables")
+
+# Search by meaning (not just keywords)
+semantic_search("how to load data efficiently")
+```
+
+Requires: `uv sync --extra semantic`
 
 ## Installation
 
-### Option 1: Install from Local Path
 ```bash
-claude --plugin-dir /path/to/my-claude-squad
-```
+# Clone
+git clone https://github.com/yourusername/my-claude-squad.git
+cd my-claude-squad
 
-### Option 2: Copy to Claude Plugins Directory
-```bash
-cp -r my-claude-squad ~/.claude/plugins/
+# Install
+uv sync
+
+# Optional: semantic memory support
+uv sync --extra semantic
+
+# Register with Claude Code
+claude mcp add squad uv run squad-mcp
 ```
 
 ## Testing
@@ -136,224 +193,33 @@ cp -r my-claude-squad ~/.claude/plugins/
 # Install dev dependencies
 uv sync --extra dev
 
-# Run all tests (344 tests)
+# Run tests
 uv run pytest
 
-# Run with coverage report
+# With coverage
 uv run pytest --cov=orchestrator --cov-report=html
-
-# Run unit tests only
-uv run pytest tests/unit/
 ```
 
-**Test Coverage:** 93% overall (344 tests across 12 test modules)
+## Documentation
 
-## Usage Examples
+- [Installation Guide](docs/installation.md)
+- [Architecture](docs/architecture.md)
+- [Agent Catalog](docs/agents.md)
+- [API Reference](docs/api-reference.md)
+- [Developer Guide](docs/developer-guide.md)
+- [Tutorials](docs/tutorials/)
 
-### Using the Planner for Complex Tasks
-```
-"Create a complete data pipeline from Snowflake to SQL Server with Airflow scheduling"
-```
-
-The planner will:
-1. Break down the task into subtasks
-2. Assign appropriate specialists
-3. Coordinate parallel execution
-4. Consolidate results
-
-### Using Individual Agents
-```
-"Write a PySpark job to transform customer data"
-→ Triggers spark-specialist
-
-"Create an Airflow DAG for daily ETL"
-→ Triggers airflow-specialist
-
-"Optimize this SQL query for Snowflake"
-→ Triggers snowflake-specialist
-```
-
-### Using Commands
-```
-/create-pipeline snowflake-to-sqlserver
-/optimize-query src/queries/customer_report.sql
-/commit
-```
-
-### Using AI Engineering Agents
-```
-"Build a RAG chatbot with Qdrant and LangChain"
-→ Triggers ai-orchestrator to coordinate rag-specialist and automation-specialist
-
-"Create a LangGraph workflow with research and writing agents"
-→ Triggers agent-framework-specialist
-
-"Set up Ollama with structured outputs for data extraction"
-→ Triggers llm-specialist
-
-"Build an MCP server to expose our database to Claude"
-→ Triggers automation-specialist
-```
-
-### Using Plugin Development Agents
-```
-"Add ML Ops agents for model training and deployment"
-→ Triggers plugin-architect to design the domain
-
-"Create a dbt-specialist agent"
-→ Triggers plugin-developer
-
-/new-agent terraform-specialist --domain devops
-/list-agents
-/plugin-status
-```
-
-## Tech Stack Coverage
-
-### Data Engineering
-- **Languages**: Python, SQL, T-SQL
-- **Data Platforms**: Snowflake, SQL Server, Delta Lake
-- **Processing**: Apache Spark, pandas, polars
-- **Orchestration**: Apache Airflow, MWAA
-- **Cloud**: AWS (S3, Glue, Athena, Redshift, Lambda, ECS, EKS)
-- **Containers**: Docker, Kubernetes, Helm
-- **IaC**: Terraform, CloudFormation, CDK
-- **Tools**: dbt, Great Expectations, pytest
-
-### AI Engineering
-- **LLM Providers**: OpenAI, Anthropic, Ollama, LiteLLM
-- **Agent Frameworks**: LangGraph, LangChain, CrewAI, AutoGen
-- **Vector Databases**: Qdrant, Weaviate, ChromaDB, Pinecone, pgvector
-- **RAG Frameworks**: LlamaIndex, LangChain
-- **Automation**: n8n, Dify, MCP servers
-- **Observability**: Langfuse, LangSmith
-- **Evaluation**: RAGAS, DeepEval
-
-## MCP Orchestrator
-
-This plugin includes a custom Python MCP server that coordinates all 19 agents with persistent memory.
-
-### Architecture
-
-```
-orchestrator/
-├── server.py           # FastMCP entry point, 21 MCP tools, singleton getters
-├── coordinator.py      # Task routing (80+ keyword rules), decomposition
-├── agent_registry.py   # Loads agents/*.md, extracts triggers
-├── memory.py           # DuckDB storage - 5 tables
-├── scheduler.py        # TaskScheduler with dependencies, CircuitBreaker
-├── agent_state.py      # AgentStateManager - health tracking, heartbeats
-├── events.py           # EventBus with sync/async handlers
-├── metrics.py          # MetricsCollector - counters, gauges, histograms
-├── retry.py            # Exponential backoff with jitter
-├── config.py           # Environment config loading
-├── tracing.py          # Langfuse observability
-└── types.py            # Pydantic models
-```
-
-### Installation
+## Environment Variables
 
 ```bash
-# Install dependencies
-cd /path/to/my-claude-squad
-uv sync
+# Optional: Langfuse observability
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
 
-# Register MCP server with Claude Code
-claude mcp add squad uv run squad-mcp
+# Optional: Custom path
+SQUAD_ROOT=/path/to/my-claude-squad
 ```
-
-### MCP Tools (21 total)
-
-**Agent Tools:**
-| Tool | Description |
-|------|-------------|
-| `list_agents` | List all 19 agents with specialties |
-| `route_task` | Auto-select best agent for task |
-| `spawn_agent` | Spawn agent by name with task |
-| `decompose_task` | Break complex task into subtasks |
-
-**Memory Tools:**
-| Tool | Description |
-|------|-------------|
-| `memory_store` | Store key-value in DuckDB with namespace |
-| `memory_query` | Query memory by pattern |
-
-**Task Scheduling:**
-| Tool | Description |
-|------|-------------|
-| `create_dependent_task` | Create task with dependencies |
-| `get_task_graph` | Get DAG of scheduled tasks |
-| `get_ready_tasks` | Get tasks with satisfied dependencies |
-| `complete_scheduled_task` | Mark task complete, unlock dependents |
-| `execute_workflow` | Create multiple tasks with dependencies |
-| `clear_workflow` | Clear all scheduled tasks |
-
-**Agent Health:**
-| Tool | Description |
-|------|-------------|
-| `get_agent_health` | Get health status for one/all agents |
-| `set_agent_status` | Set agent status (idle, busy, paused, error, offline) |
-
-**Status/Metrics:**
-| Tool | Description |
-|------|-------------|
-| `swarm_status` | Show active agents and stats |
-| `complete_run` | Mark task as completed |
-| `get_health` | System health check |
-| `get_metrics` | Get counters, gauges, histograms |
-
-**Events:**
-| Tool | Description |
-|------|-------------|
-| `get_events` | Get recent events with filtering |
-| `emit_event` | Emit custom event to event bus |
-
-### Usage
-
-Once registered, Claude Code can use the orchestrator tools:
-
-```
-You: "What agents are available?"
-→ Claude uses list_agents tool
-
-You: "Route this task to the best agent: optimize Snowflake query"
-→ Claude uses route_task tool → recommends snowflake-specialist
-
-You: "Create a data pipeline from S3 to Snowflake with Airflow"
-→ Claude uses decompose_task tool → breaks into subtasks with agent assignments
-```
-
-### Persistent Memory
-
-The orchestrator stores state in `.swarm/memory.duckdb` (5 tables):
-
-- **memories**: Key-value storage with namespaces and metadata
-- **agent_runs**: History of all agent executions with tokens/results
-- **task_log**: Task status and results
-- **agent_health**: Runtime health state (status, health_score, success/error counts)
-- **agent_events**: Event log (heartbeats, status changes, errors)
-
-```
-You: "Store this pattern for later: use incremental loads for fact tables"
-→ Claude uses memory_store tool
-
-You: "What patterns do we have for data loading?"
-→ Claude uses memory_query with pattern "load"
-```
-
-### Features
-
-- **Keyword Routing**: Matches tasks to agents by keywords and descriptions
-- **Task Decomposition**: Splits complex tasks into agent-assigned subtasks
-- **Task Dependencies**: DAG-based workflow execution with topological sorting
-- **CircuitBreaker**: Fault tolerance with automatic recovery (CLOSED → OPEN → HALF_OPEN)
-- **Agent Health**: Health scores, heartbeats, stale detection
-- **EventBus**: Sync/async event handlers with history and filtering
-- **MetricsCollector**: Counters, gauges, histograms, timers
-- **DuckDB Memory**: Fast analytical queries on run history (5 tables)
-- **Agent Registry**: Auto-discovers agents from `agents/*.md` files
-- **Run Tracking**: Logs all agent executions with status and tokens
-- **Langfuse Tracing**: Optional observability integration
 
 ## License
 
