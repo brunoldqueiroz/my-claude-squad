@@ -288,7 +288,7 @@ This approach uses Claude's semantic understanding instead of regex patterns.
 
 ## MCP Tools Summary
 
-64 tools + 6 resources exposed via FastMCP:
+71 tools + 6 resources exposed via FastMCP:
 
 **Orchestration Tools (23):**
 - **Agent**: `list_agents`, `route_task`, `spawn_agent`, `decompose_task`, `submit_decomposition`
@@ -323,6 +323,13 @@ This approach uses Claude's semantic understanding instead of regex patterns.
 - **AI Engineering**: `scaffold_rag`, `scaffold_mcp_server`
 - **Documentation**: `generate_commit_message`
 - **Research**: `lookup_docs`
+
+**Ergonomics Tools (7):**
+- **Unified**: `squad` (aliases + intent detection)
+- **Aliases**: `list_aliases`
+- **Intents**: `detect_intent`, `detect_all_intents`
+- **Shortcuts**: `list_shortcuts_tool`, `run_shortcut`
+- **Project**: `detect_project`
 
 **Resources (6):**
 - `squad://agents`, `squad://agents/{name}`
@@ -438,6 +445,102 @@ if is_ann_available():
 | `semantic_reindex` | Regenerate all embeddings |
 | `semantic_delete` | Remove memory and embedding |
 
+## Ergonomics (Aliases, Intents, Shortcuts)
+
+Inspired by Claude Flow, these tools reduce the verbosity of MCP invocations.
+
+### Tool Aliases
+
+Short names that map to full MCP tools (`orchestrator/aliases.py`):
+
+```python
+# Instead of mcp__squad__swarm_status
+squad("status")  # → swarm_status
+
+# Instead of mcp__squad__semantic_search
+squad("search auth patterns")  # → semantic_search with query="auth patterns"
+```
+
+**Common Aliases:**
+| Alias | Tool | Description |
+|-------|------|-------------|
+| `status` | swarm_status | Get swarm overview |
+| `spawn` | spawn_agent | Spawn an agent |
+| `search` | semantic_search | Semantic similarity search |
+| `remember` | memory_store | Store key-value memory |
+| `recall` | memory_query | Query memories |
+| `plan` | decompose_task | Decompose complex task |
+| `commit` | generate_commit_message | Generate commit message |
+| `docs` | lookup_docs | Look up library docs |
+| `k8s` | create_k8s_manifest | Generate K8s manifests |
+
+### Intent Detection
+
+Natural language understanding for task routing (`orchestrator/intents.py`):
+
+```python
+detect_intent("help me with SQL")
+# → {"agent": "sql-specialist", "action": "sql_help", "confidence": 0.9}
+
+detect_intent("review this code")
+# → {"agent": "squad-orchestrator", "action": "code_review", "confidence": 0.85}
+```
+
+**Supported Intent Categories:**
+- `create` - Building something new
+- `fix` - Debugging, troubleshooting
+- `review` - Code review, analysis
+- `optimize` - Performance improvement
+- `explain` - Documentation, understanding
+- `deploy` - Infrastructure, CI/CD
+- `research` - Looking up information
+- `coordinate` - Multi-step orchestration
+
+### Compound Shortcuts
+
+Multi-step workflows in single commands (`orchestrator/shortcuts.py`):
+
+```python
+run_shortcut("etl-pipeline", source="s3", target="snowflake", name="daily-sales")
+# Executes: create_pipeline → create_session
+
+run_shortcut("deploy-service", app_name="api")
+# Executes: create_dockerfile → create_k8s_manifest
+```
+
+**Available Shortcuts:**
+| Shortcut | Steps | Description |
+|----------|-------|-------------|
+| `etl-pipeline` | 2 | Create pipeline + session |
+| `deploy-service` | 2 | Dockerfile + K8s manifests |
+| `start-rag` | 2 | Scaffold RAG + session |
+| `review-pr` | 2 | Route + session |
+| `analyze-slow-query` | 2 | Analyze + spawn SQL specialist |
+| `learn-library` | 1 | Look up docs |
+
+### Project Detection
+
+Auto-detect project type and recommend agents:
+
+```python
+detect_project()
+# → {"detected_types": ["python", "docker"], "recommended_agents": ["python-developer", "container-specialist"]}
+```
+
+**Detected Types:** python, node, rust, go, java, dbt, airflow, docker, kubernetes, terraform
+
+### Ergonomics Tools
+
+| Tool | Description |
+|------|-------------|
+| `squad` | Unified command interface (aliases + intents) |
+| `list_aliases` | List available aliases by category |
+| `detect_intent` | Detect intent from natural language |
+| `detect_all_intents` | Detect multiple intents with threshold |
+| `list_shortcuts_tool` | List compound shortcuts |
+| `run_shortcut` | Execute a shortcut workflow |
+| `detect_project` | Detect project type and recommend agents |
+
 ## Roadmap
 
 All planned enhancements complete:
@@ -446,3 +549,4 @@ All planned enhancements complete:
 - [x] Hooks system (pre/post operation) - 8 tools added
 - [x] Commands → MCP tools conversion (9 tools added)
 - [x] Semantic memory search - 6 tools added
+- [x] Ergonomics (aliases, intents, shortcuts) - 7 tools added

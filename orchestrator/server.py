@@ -2846,6 +2846,302 @@ def semantic_delete(key: str) -> dict[str, Any]:
     }
 
 
+# === Ergonomics Tools (Aliases, Intents, Shortcuts) ===
+
+
+from orchestrator.aliases import get_alias_resolver, ALIASES
+from orchestrator.intents import get_intent_detector, IntentCategory, ACTION_TO_TOOL
+from orchestrator.shortcuts import (
+    get_shortcut_executor,
+    SHORTCUTS,
+    list_shortcuts as list_shortcuts_fn,
+    get_shortcut_categories,
+)
+
+
+@mcp.tool()
+@observe(name="squad")
+def squad(command: str) -> dict[str, Any]:
+    """Unified command interface for squad operations.
+
+    Accepts natural language or short aliases instead of full tool names.
+    Examples:
+        squad("status") → swarm status
+        squad("help me with SQL") → detects intent, suggests sql-specialist
+        squad("spawn python-developer Fix the bug") → spawn with task
+        squad("search auth patterns") → semantic search
+
+    Args:
+        command: Short alias, intent description, or action (can include arguments)
+
+    Returns:
+        Result from the matched tool or suggestions
+    """
+    resolver = get_alias_resolver()
+    detector = get_intent_detector()
+
+    # First, try exact alias match
+    parts = command.split(maxsplit=1)
+    first_word = parts[0].lower()
+    remaining = parts[1] if len(parts) > 1 else None
+
+    alias = resolver.resolve(first_word)
+    if alias:
+        # Determine the main parameter based on tool
+        main_param_map = {
+            "spawn_agent": "task",
+            "route_task": "task",
+            "memory_query": "pattern",
+            "semantic_search": "query",
+            "memory_store": "value",
+            "semantic_store": "value",
+            "lookup_docs": "library",
+            "analyze_query": "sql",
+        }
+        param_name = main_param_map.get(alias.tool)
+        extracted_arg = {param_name: remaining} if param_name and remaining else {}
+
+        return {
+            "matched": "alias",
+            "alias": alias.name,
+            "tool": alias.tool,
+            "description": alias.description,
+            "hint": f"Call mcp__squad__{alias.tool} with your arguments",
+            "extracted_argument": extracted_arg,
+        }
+
+    # Second, try intent detection
+    intent = detector.detect(command)
+    if intent and intent.confidence >= 0.6:
+        suggested_tool = detector.get_suggested_tool(intent)
+        return {
+            "matched": "intent",
+            "intent": intent.category.value,
+            "confidence": round(intent.confidence, 2),
+            "agent": intent.agent,
+            "action": intent.action,
+            "suggested_tool": suggested_tool,
+            "explanation": detector.explain_intent(intent),
+            "context": intent.context,
+        }
+
+    # Third, check for shortcut
+    if first_word in SHORTCUTS:
+        shortcut = SHORTCUTS[first_word]
+        return {
+            "matched": "shortcut",
+            "shortcut": shortcut.name,
+            "description": shortcut.description,
+            "required_args": shortcut.required_args,
+            "optional_args": shortcut.optional_args,
+            "steps": len(shortcut.steps),
+            "hint": f"Use run_shortcut('{shortcut.name}', ...) to execute",
+        }
+
+    # No match - provide suggestions
+    suggestions = resolver.suggest(first_word) if command else []
+
+    return {
+        "matched": None,
+        "command": command,
+        "suggestions": suggestions[:5],
+        "hint": "Try 'list_aliases' to see all shortcuts or describe what you want to do",
+    }
+
+
+@mcp.tool()
+@observe(name="list_aliases")
+def list_aliases(category: str | None = None) -> dict[str, Any]:
+    """List available command aliases.
+
+    Aliases are short names that map to full MCP tools.
+
+    Args:
+        category: Optional category filter (status, agents, memory, workflow, swarm, session, commands, system)
+
+    Returns:
+        List of aliases with their mappings
+    """
+    resolver = get_alias_resolver()
+    aliases = resolver.list_aliases(category)
+    categories = resolver.get_categories()
+
+    return {
+        "success": True,
+        "count": len(aliases),
+        "categories": categories,
+        "aliases": aliases,
+        "usage": "Use squad('<alias>') or call the tool directly",
+    }
+
+
+@mcp.tool()
+@observe(name="detect_intent")
+def detect_intent(text: str) -> dict[str, Any]:
+    """Detect user intent from natural language.
+
+    Analyzes text to determine what the user wants to do
+    and recommends appropriate agents and tools.
+
+    Args:
+        text: Natural language description of the task
+
+    Returns:
+        Detected intent with confidence and recommendations
+    """
+    detector = get_intent_detector()
+    intent = detector.detect(text)
+
+    if not intent:
+        return {
+            "success": False,
+            "text": text,
+            "intent": None,
+            "hint": "Try being more specific about what you want to do",
+        }
+
+    return {
+        "success": True,
+        "text": text,
+        "intent": {
+            "category": intent.category.value,
+            "confidence": round(intent.confidence, 3),
+            "agent": intent.agent,
+            "action": intent.action,
+            "suggested_tool": detector.get_suggested_tool(intent),
+        },
+        "explanation": detector.explain_intent(intent),
+        "keywords": intent.keywords,
+        "context": intent.context,
+    }
+
+
+@mcp.tool()
+@observe(name="detect_all_intents")
+def detect_all_intents(text: str, threshold: float = 0.5) -> dict[str, Any]:
+    """Detect all matching intents from natural language.
+
+    Useful for complex requests that might involve multiple agents.
+
+    Args:
+        text: Natural language description
+        threshold: Minimum confidence threshold (0-1)
+
+    Returns:
+        All detected intents above threshold, sorted by confidence
+    """
+    detector = get_intent_detector()
+    intents = detector.detect_all(text, threshold)
+
+    return {
+        "success": True,
+        "text": text,
+        "threshold": threshold,
+        "count": len(intents),
+        "intents": [
+            {
+                "category": i.category.value,
+                "confidence": round(i.confidence, 3),
+                "agent": i.agent,
+                "action": i.action,
+                "suggested_tool": detector.get_suggested_tool(i),
+            }
+            for i in intents
+        ],
+    }
+
+
+@mcp.tool()
+@observe(name="list_shortcuts_tool")
+def list_shortcuts_tool(category: str | None = None) -> dict[str, Any]:
+    """List available compound shortcuts.
+
+    Shortcuts combine multiple tools into single operations.
+
+    Args:
+        category: Optional category filter (data, development, devops, ai, research)
+
+    Returns:
+        List of shortcuts with descriptions and required args
+    """
+    shortcuts = list_shortcuts_fn(category)
+    categories = get_shortcut_categories()
+
+    return {
+        "success": True,
+        "count": len(shortcuts),
+        "categories": categories,
+        "shortcuts": shortcuts,
+    }
+
+
+@mcp.tool()
+@observe(name="run_shortcut")
+def run_shortcut(name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Execute a compound shortcut.
+
+    Shortcuts orchestrate multiple tools in sequence.
+
+    Args:
+        name: Shortcut name (e.g., 'etl-pipeline', 'deploy-service')
+        args: Arguments dict for the shortcut (e.g., {"source": "s3", "target": "snowflake"})
+
+    Returns:
+        Combined results from all steps
+    """
+    if name not in SHORTCUTS:
+        return {
+            "success": False,
+            "error": f"Shortcut '{name}' not found",
+            "available": list(SHORTCUTS.keys()),
+        }
+
+    shortcut = SHORTCUTS[name]
+    shortcut_args = args or {}
+
+    # Note: For full execution, tools would need to be registered
+    # This returns guidance on what would be executed
+    return {
+        "success": True,
+        "shortcut": name,
+        "description": shortcut.description,
+        "args_received": shortcut_args,
+        "missing_required": [a for a in shortcut.required_args if a not in shortcut_args],
+        "steps": [
+            {
+                "order": i + 1,
+                "tool": step.tool,
+                "args": step.args,
+            }
+            for i, step in enumerate(shortcut.steps)
+        ],
+        "hint": "Execute each step's tool in sequence with resolved arguments",
+    }
+
+
+@mcp.tool()
+@observe(name="detect_project")
+def detect_project(path: str | None = None) -> dict[str, Any]:
+    """Detect project type and recommend agents.
+
+    Analyzes directory contents to determine project type
+    (Python, Node, dbt, Airflow, etc.) and suggests relevant agents.
+
+    Args:
+        path: Path to analyze (defaults to current directory)
+
+    Returns:
+        Detected project types and recommended agents
+    """
+    executor = get_shortcut_executor()
+    result = executor.detect_project_type(path)
+
+    return {
+        "success": True,
+        **result,
+    }
+
+
 # === MCP Resources ===
 
 

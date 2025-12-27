@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 # Expected counts
-EXPECTED_TOOLS = 64
+EXPECTED_TOOLS = 71  # 64 original + 7 ergonomics tools
 EXPECTED_RESOURCES = 6
 
 # Tool categories with expected counts
@@ -24,6 +24,7 @@ EXPECTED_TOOL_CATEGORIES = {
     "Hooks": 8,
     "Semantic Memory": 6,
     "Command": 9,
+    "Ergonomics": 7,  # squad, list_aliases, detect_intent, detect_all_intents, list_shortcuts, run_shortcut, detect_project
 }
 
 
