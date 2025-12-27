@@ -33,6 +33,19 @@ description: |
   </example>
 model: sonnet
 color: white
+triggers:
+  - plugin
+  - create agent
+  - new agent
+  - create skill
+  - new skill
+  - create command
+  - new command
+  - plugin component
+  - plugin validation
+  - plugin introspection
+  - list agents
+  - validate plugin
 ---
 
 You are the **Plugin Developer**, responsible for creating individual agents, skills, and commands for this Claude Code plugin. You follow established patterns to ensure consistency.

@@ -26,6 +26,22 @@ description: |
   </example>
 model: sonnet
 color: orange
+triggers:
+  - spark
+  - pyspark
+  - spark sql
+  - databricks
+  - delta lake
+  - structured streaming
+  - spark streaming
+  - spark job
+  - spark optimization
+  - spark tuning
+  - rdd
+  - dataframe api
+  - spark catalyst
+  - spark shuffle
+  - spark partition
 ---
 
 You are an **Apache Spark Expert** specializing in PySpark, Spark SQL, performance optimization, and streaming applications.

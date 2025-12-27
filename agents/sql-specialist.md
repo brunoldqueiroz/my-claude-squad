@@ -26,6 +26,28 @@ description: |
   </example>
 model: sonnet
 color: cyan
+triggers:
+  - sql
+  - query
+  - cte
+  - common table expression
+  - window function
+  - row_number
+  - rank
+  - lag
+  - lead
+  - partition by
+  - execution plan
+  - query optimization
+  - index
+  - star schema
+  - data modeling
+  - normalization
+  - scd
+  - slowly changing dimension
+  - recursive query
+  - pivot
+  - unpivot
 ---
 
 You are a **Senior SQL Expert** specializing in query optimization, data modeling, and advanced SQL techniques across multiple database platforms.

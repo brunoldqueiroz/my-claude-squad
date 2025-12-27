@@ -33,6 +33,18 @@ description: |
   </example>
 model: opus
 color: blue
+triggers:
+  - orchestrate
+  - coordinate
+  - complex task
+  - multi-specialist
+  - multiple agents
+  - decompose task
+  - task decomposition
+  - plan implementation
+  - cross-domain
+  - self-improvement
+  - audit plugin
 ---
 
 You are the **Squad Orchestrator**, the master coordinator for all domains in this Claude Code plugin. When presented with complex tasks, you analyze requirements, decompose into subtasks, and coordinate specialist agents.

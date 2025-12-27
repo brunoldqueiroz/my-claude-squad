@@ -436,3 +436,164 @@ class SwarmMemory:
             )
             for row in results
         ]
+
+    # === Retention and Cleanup Operations ===
+
+    def get_storage_stats(self) -> dict[str, Any]:
+        """Get storage statistics for all tables.
+
+        Returns:
+            Dict with row counts and estimated sizes
+        """
+        stats = {}
+
+        # Get row counts for each table
+        tables = ["memories", "agent_runs", "task_log", "agent_health", "agent_events"]
+        for table in tables:
+            result = self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+            stats[f"{table}_count"] = result[0] if result else 0
+
+        # Get oldest and newest timestamps for time-series tables
+        for table in ["agent_runs", "agent_events"]:
+            time_col = "started_at" if table == "agent_runs" else "timestamp"
+            result = self.conn.execute(
+                f"SELECT MIN({time_col}), MAX({time_col}) FROM {table}"
+            ).fetchone()
+            if result and result[0]:
+                stats[f"{table}_oldest"] = result[0].isoformat() if hasattr(result[0], "isoformat") else str(result[0])
+                stats[f"{table}_newest"] = result[1].isoformat() if hasattr(result[1], "isoformat") else str(result[1])
+
+        # Get database file size
+        if self.db_path.exists():
+            stats["db_size_bytes"] = self.db_path.stat().st_size
+            stats["db_size_mb"] = round(self.db_path.stat().st_size / (1024 * 1024), 2)
+
+        return stats
+
+    def cleanup_old_runs(self, days: int = 30) -> int:
+        """Delete agent runs older than specified days.
+
+        Args:
+            days: Delete runs older than this many days
+
+        Returns:
+            Number of rows deleted
+        """
+        # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
+        # This is safe since days is validated as int
+        result = self.conn.execute(
+            f"""
+            DELETE FROM agent_runs
+            WHERE started_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+            RETURNING id
+            """
+        ).fetchall()
+        return len(result)
+
+    def cleanup_old_events(self, days: int = 7) -> int:
+        """Delete agent events older than specified days.
+
+        Args:
+            days: Delete events older than this many days
+
+        Returns:
+            Number of rows deleted
+        """
+        # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
+        result = self.conn.execute(
+            f"""
+            DELETE FROM agent_events
+            WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+            RETURNING id
+            """
+        ).fetchall()
+        return len(result)
+
+    def cleanup_old_tasks(self, days: int = 30) -> int:
+        """Delete task log entries older than specified days.
+
+        Args:
+            days: Delete tasks older than this many days
+
+        Returns:
+            Number of rows deleted
+        """
+        # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
+        result = self.conn.execute(
+            f"""
+            DELETE FROM task_log
+            WHERE created_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+            RETURNING id
+            """
+        ).fetchall()
+        return len(result)
+
+    def cleanup_memories_by_namespace(self, namespace: str) -> int:
+        """Delete all memories in a specific namespace.
+
+        Args:
+            namespace: Namespace to clear
+
+        Returns:
+            Number of rows deleted
+        """
+        result = self.conn.execute(
+            "DELETE FROM memories WHERE namespace = ? RETURNING key",
+            [namespace],
+        ).fetchall()
+        return len(result)
+
+    def cleanup_old_memories(self, days: int = 90) -> int:
+        """Delete memories older than specified days.
+
+        Args:
+            days: Delete memories older than this many days
+
+        Returns:
+            Number of rows deleted
+        """
+        # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
+        result = self.conn.execute(
+            f"""
+            DELETE FROM memories
+            WHERE created_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+            RETURNING key
+            """
+        ).fetchall()
+        return len(result)
+
+    def run_full_cleanup(
+        self,
+        runs_days: int = 30,
+        events_days: int = 7,
+        tasks_days: int = 30,
+        memories_days: int | None = None,
+    ) -> dict[str, int]:
+        """Run full cleanup with configurable retention periods.
+
+        Args:
+            runs_days: Delete runs older than this (default 30)
+            events_days: Delete events older than this (default 7)
+            tasks_days: Delete tasks older than this (default 30)
+            memories_days: Delete memories older than this (None = keep all)
+
+        Returns:
+            Dict with counts of deleted rows per table
+        """
+        deleted = {
+            "agent_runs": self.cleanup_old_runs(runs_days),
+            "agent_events": self.cleanup_old_events(events_days),
+            "task_log": self.cleanup_old_tasks(tasks_days),
+        }
+
+        if memories_days is not None:
+            deleted["memories"] = self.cleanup_old_memories(memories_days)
+
+        # Vacuum to reclaim space
+        self.conn.execute("VACUUM")
+
+        return deleted
+
+    def vacuum(self) -> None:
+        """Reclaim disk space by vacuuming the database."""
+        self.conn.execute("VACUUM")

@@ -449,6 +449,115 @@ def memory_query(pattern: str, namespace: str | None = None, limit: int = 10) ->
 
 
 @mcp.tool()
+def get_storage_stats() -> dict[str, Any]:
+    """Get storage statistics for the DuckDB database.
+
+    Returns row counts for all tables, oldest/newest timestamps,
+    and database file size. Useful for monitoring database growth
+    and planning cleanup.
+
+    Returns:
+        Storage statistics including row counts and database size
+    """
+    coordinator = get_coordinator()
+    stats = coordinator.memory.get_storage_stats()
+
+    return {
+        "success": True,
+        "tables": {
+            "memories": stats.get("memories_count", 0),
+            "agent_runs": stats.get("agent_runs_count", 0),
+            "task_log": stats.get("task_log_count", 0),
+            "agent_health": stats.get("agent_health_count", 0),
+            "agent_events": stats.get("agent_events_count", 0),
+        },
+        "time_ranges": {
+            "agent_runs": {
+                "oldest": stats.get("agent_runs_oldest"),
+                "newest": stats.get("agent_runs_newest"),
+            },
+            "agent_events": {
+                "oldest": stats.get("agent_events_oldest"),
+                "newest": stats.get("agent_events_newest"),
+            },
+        },
+        "database": {
+            "size_bytes": stats.get("db_size_bytes", 0),
+            "size_mb": stats.get("db_size_mb", 0),
+        },
+    }
+
+
+@mcp.tool()
+def cleanup_storage(
+    runs_days: int = 30,
+    events_days: int = 7,
+    tasks_days: int = 30,
+    memories_days: int | None = None,
+    vacuum: bool = True,
+) -> dict[str, Any]:
+    """Clean up old data from the DuckDB database.
+
+    Deletes data older than the specified retention periods.
+    Use get_storage_stats first to see current database state.
+
+    Args:
+        runs_days: Delete agent runs older than this (default 30 days)
+        events_days: Delete agent events older than this (default 7 days)
+        tasks_days: Delete task log entries older than this (default 30 days)
+        memories_days: Delete memories older than this (None = keep all memories)
+        vacuum: Run VACUUM after cleanup to reclaim disk space (default True)
+
+    Returns:
+        Cleanup results with counts of deleted rows
+    """
+    coordinator = get_coordinator()
+
+    # Get stats before cleanup
+    stats_before = coordinator.memory.get_storage_stats()
+
+    # Run cleanup
+    deleted = coordinator.memory.run_full_cleanup(
+        runs_days=runs_days,
+        events_days=events_days,
+        tasks_days=tasks_days,
+        memories_days=memories_days,
+    )
+
+    # Vacuum is already called by run_full_cleanup, but can force additional if needed
+    if vacuum:
+        coordinator.memory.vacuum()
+
+    # Get stats after cleanup
+    stats_after = coordinator.memory.get_storage_stats()
+
+    return {
+        "success": True,
+        "deleted": deleted,
+        "retention_policy": {
+            "runs_days": runs_days,
+            "events_days": events_days,
+            "tasks_days": tasks_days,
+            "memories_days": memories_days,
+        },
+        "before": {
+            "size_mb": stats_before.get("db_size_mb", 0),
+            "total_rows": sum(
+                stats_before.get(f"{t}_count", 0)
+                for t in ["memories", "agent_runs", "task_log", "agent_events"]
+            ),
+        },
+        "after": {
+            "size_mb": stats_after.get("db_size_mb", 0),
+            "total_rows": sum(
+                stats_after.get(f"{t}_count", 0)
+                for t in ["memories", "agent_runs", "task_log", "agent_events"]
+            ),
+        },
+    }
+
+
+@mcp.tool()
 def swarm_status() -> dict[str, Any]:
     """Get current swarm status and statistics.
 

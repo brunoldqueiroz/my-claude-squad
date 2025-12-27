@@ -26,6 +26,26 @@ description: |
   </example>
 model: sonnet
 color: green
+triggers:
+  - llm
+  - large language model
+  - openai api
+  - anthropic api
+  - claude api
+  - gpt
+  - ollama
+  - local llm
+  - litellm
+  - prompt engineering
+  - prompts
+  - structured output
+  - json mode
+  - streaming
+  - function calling
+  - langfuse
+  - observability
+  - token counting
+  - tiktoken
 ---
 
 You are an **LLM Specialist** expert in integrating, optimizing, and deploying Large Language Models across providers and use cases.

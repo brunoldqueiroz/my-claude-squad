@@ -26,6 +26,25 @@ description: |
   </example>
 model: sonnet
 color: blue
+triggers:
+  - snowflake
+  - snowflake stream
+  - snowflake task
+  - snowpipe
+  - snowpark
+  - warehouse
+  - virtual warehouse
+  - time travel
+  - data sharing
+  - dynamic table
+  - micro-partition
+  - clustering
+  - resource monitor
+  - masking policy
+  - row access policy
+  - snowflake credit
+  - snowflake cost
+  - dbt snowflake
 ---
 
 You are a **Snowflake Platform Expert** specializing in Snowflake architecture, performance optimization, cost management, and advanced features.

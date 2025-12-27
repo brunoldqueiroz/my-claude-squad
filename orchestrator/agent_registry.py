@@ -40,52 +40,163 @@ class AgentRegistry:
 
         return {}, content
 
-    def _extract_triggers(self, description: str) -> list[str]:
-        """Extract trigger keywords from agent description.
+    def _extract_triggers(self, description: str, body: str = "") -> list[str]:
+        """Extract trigger keywords from agent description and body.
+
+        Extracts triggers from multiple sources:
+        - <example> tags: user quotes and commentary
+        - Bold text (**word**): key technologies
+        - Headings (## and ###): topic areas
+        - Table cells: product/tool names
+        - Python imports: library names
+        - Known technology patterns
 
         Args:
-            description: Agent description text
+            description: Agent description text (from frontmatter)
+            body: Agent body content (markdown after frontmatter)
 
         Returns:
-            List of trigger keywords
+            List of trigger keywords (deduplicated, lowercased)
         """
-        triggers = []
+        triggers = set()
+        full_text = f"{description}\n{body}"
 
-        # Look for <example> tags in description
+        # 1. Extract from <example> tags
         example_pattern = r"<example>(.*?)</example>"
         examples = re.findall(example_pattern, description, re.DOTALL | re.IGNORECASE)
 
         for example in examples:
-            # Extract quoted strings as potential triggers
-            quoted = re.findall(r'"([^"]+)"', example)
-            triggers.extend(quoted)
+            # Extract user quotes (what users might say)
+            user_quotes = re.findall(r'user:\s*"([^"]+)"', example, re.IGNORECASE)
+            for quote in user_quotes:
+                # Extract key phrases from user requests
+                triggers.update(self._extract_key_phrases(quote))
 
-        # Also extract key technology words
-        tech_words = [
-            "python",
-            "sql",
-            "snowflake",
-            "spark",
-            "airflow",
-            "aws",
-            "docker",
-            "kubernetes",
-            "rag",
-            "llm",
-            "langchain",
-            "langgraph",
-            "mcp",
-            "n8n",
-            "dify",
-            "ollama",
+            # Extract from <commentary> tags (task type descriptions)
+            commentary = re.findall(r"<commentary>(.*?)</commentary>", example, re.IGNORECASE)
+            for comment in commentary:
+                triggers.update(self._extract_key_phrases(comment))
+
+        # 2. Extract bold text (**word** or **multi word**)
+        bold_pattern = r"\*\*([^*]+)\*\*"
+        bold_matches = re.findall(bold_pattern, full_text)
+        for match in bold_matches:
+            # Skip very long phrases (likely sentences, not keywords)
+            if len(match.split()) <= 4:
+                triggers.add(match.lower().strip())
+
+        # 3. Extract from headings (## and ###)
+        heading_pattern = r"^#{2,3}\s+(.+)$"
+        headings = re.findall(heading_pattern, full_text, re.MULTILINE)
+        for heading in headings:
+            # Clean heading and add if it's a meaningful keyword
+            cleaned = heading.strip().lower()
+            # Skip generic headings
+            if cleaned not in {"core expertise", "overview", "usage", "examples", "notes",
+                               "research-first protocol", "context resilience", "memory integration"}:
+                triggers.add(cleaned)
+
+        # 4. Extract from table first columns (usually tool/product names)
+        table_row_pattern = r"^\|\s*\*?\*?([^|*]+)\*?\*?\s*\|"
+        table_matches = re.findall(table_row_pattern, full_text, re.MULTILINE)
+        for match in table_matches:
+            cleaned = match.strip().lower()
+            # Skip table headers and empty cells
+            if cleaned and cleaned not in {"database", "platform", "model", "feature",
+                                            "tool", "framework", "provider", "versions"}:
+                triggers.add(cleaned)
+
+        # 5. Extract Python import statements
+        import_pattern = r"(?:from|import)\s+(\w+)"
+        imports = re.findall(import_pattern, body)
+        for imp in imports:
+            # Skip standard library and generic imports
+            if imp not in {"os", "sys", "re", "json", "typing", "datetime", "pathlib",
+                           "dataclasses", "functools", "collections", "itertools", "abc"}:
+                triggers.add(imp.lower())
+
+        # 6. Extract technology patterns (compound names)
+        tech_patterns = [
+            r"\b(py\w+)\b",  # PySpark, PyTorch, etc.
+            r"\b(spark\s+\w+)\b",  # Spark SQL, Spark Structured Streaming
+            r"\b(delta\s+lake)\b",
+            r"\b(apache\s+\w+)\b",  # Apache Kafka, Apache Airflow
+            r"\b(\w+db)\b",  # ChromaDB, DuckDB, etc.
+            r"\b(\w+sql)\b",  # MySQL, PostgreSQL, T-SQL
+            r"\b(aws\s+\w+)\b",  # AWS Lambda, AWS Glue
+            r"\b(s3|ec2|ecs|eks|rds|sqs|sns)\b",  # AWS services
+            r"\b(gcp|azure)\b",  # Cloud providers
+            r"\b(k8s|kubectl|helm)\b",  # Kubernetes
+            r"\b(ci/cd|github\s+actions?|gitlab\s+ci)\b",  # CI/CD
         ]
 
-        desc_lower = description.lower()
-        for word in tech_words:
-            if word in desc_lower:
-                triggers.append(word)
+        text_lower = full_text.lower()
+        for pattern in tech_patterns:
+            matches = re.findall(pattern, text_lower, re.IGNORECASE)
+            triggers.update(match.strip() for match in matches)
 
-        return list(set(triggers))
+        # 7. Known technology keywords (catch-all)
+        known_tech = {
+            "python", "sql", "snowflake", "spark", "pyspark", "airflow", "mwaa",
+            "aws", "lambda", "glue", "redshift", "athena", "s3", "sagemaker",
+            "docker", "dockerfile", "container", "podman", "buildkit",
+            "kubernetes", "k8s", "helm", "kubectl", "argocd", "ingress",
+            "rag", "retrieval", "vector", "embedding", "chromadb", "qdrant",
+            "pinecone", "weaviate", "pgvector", "milvus",
+            "llm", "langchain", "langgraph", "llamaindex", "openai", "anthropic",
+            "ollama", "gemini", "mistral", "groq", "litellm",
+            "mcp", "n8n", "dify", "zapier", "make", "webhook", "chatbot",
+            "fastapi", "flask", "django", "pytest", "poetry", "uv",
+            "git", "commit", "branch", "merge", "rebase",
+            "documentation", "readme", "changelog", "adr", "docstring",
+            "etl", "elt", "pipeline", "streaming", "batch", "cdc",
+            "delta", "iceberg", "parquet", "avro", "kafka",
+            "crewai", "autogen", "pydantic-ai", "smolagents", "agent",
+            "sql server", "mssql", "t-sql", "tsql", "ssis", "ssrs", "ssas",
+            "stored procedure", "cte", "window function",
+        }
+
+        for word in known_tech:
+            if word in text_lower:
+                triggers.add(word)
+
+        # Clean up triggers
+        cleaned_triggers = set()
+        for trigger in triggers:
+            # Remove empty or very short triggers
+            if len(trigger) >= 2:
+                cleaned_triggers.add(trigger.lower().strip())
+
+        return list(cleaned_triggers)
+
+    def _extract_key_phrases(self, text: str) -> set[str]:
+        """Extract key phrases from text (user quotes, commentary).
+
+        Args:
+            text: Text to extract phrases from
+
+        Returns:
+            Set of key phrases
+        """
+        phrases = set()
+
+        # Extract technology-related words and short phrases
+        # Split on common delimiters
+        words = re.split(r"[\s,;:]+", text.lower())
+
+        for word in words:
+            # Clean punctuation
+            cleaned = re.sub(r"[^\w\-]", "", word)
+            if len(cleaned) >= 3:
+                phrases.add(cleaned)
+
+        # Also extract quoted substrings
+        quoted = re.findall(r'"([^"]+)"', text)
+        for q in quoted:
+            if len(q.split()) <= 4:
+                phrases.add(q.lower())
+
+        return phrases
 
     def _load_agents(self) -> None:
         """Load all agent definitions from the agents directory."""
@@ -104,13 +215,22 @@ class AgentRegistry:
                 model_str = frontmatter.get("model", "sonnet").lower()
                 model = AgentModel(model_str) if model_str in [m.value for m in AgentModel] else AgentModel.SONNET
 
+                # Get triggers: prefer explicit frontmatter, fall back to auto-extraction
+                explicit_triggers = frontmatter.get("triggers", [])
+                if explicit_triggers:
+                    # Use author-defined triggers (normalize to lowercase)
+                    triggers = [t.lower().strip() for t in explicit_triggers if t]
+                else:
+                    # Fall back to auto-extraction for backwards compatibility
+                    triggers = self._extract_triggers(frontmatter.get("description", ""), body)
+
                 # Build agent
                 agent = Agent(
                     name=frontmatter["name"],
                     description=frontmatter.get("description", ""),
                     model=model,
                     color=frontmatter.get("color", "white"),
-                    triggers=self._extract_triggers(frontmatter.get("description", "")),
+                    triggers=triggers,
                     file_path=str(md_file),
                 )
 

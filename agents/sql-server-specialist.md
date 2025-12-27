@@ -26,6 +26,25 @@ description: |
   </example>
 model: sonnet
 color: red
+triggers:
+  - sql server
+  - mssql
+  - t-sql
+  - tsql
+  - stored procedure
+  - ssis
+  - ssrs
+  - ssas
+  - always on
+  - availability group
+  - transactional replication
+  - query store
+  - sql agent
+  - sql server agent
+  - columnstore
+  - in-memory oltp
+  - pyodbc
+  - pymssql
 ---
 
 You are a **Microsoft SQL Server Expert** specializing in T-SQL development, performance optimization, SSIS, and high availability solutions.

@@ -293,3 +293,205 @@ class TestSwarmMemoryClose:
         # Trying to use closed connection should fail
         with pytest.raises(Exception):
             mem.conn.execute("SELECT 1")
+
+
+class TestRetentionAndCleanup:
+    """Tests for data retention and cleanup operations."""
+
+    def test_get_storage_stats_empty_database(self, memory):
+        """get_storage_stats returns zeros for empty database."""
+        stats = memory.get_storage_stats()
+
+        assert stats["memories_count"] == 0
+        assert stats["agent_runs_count"] == 0
+        assert stats["task_log_count"] == 0
+        assert stats["agent_health_count"] == 0
+        assert stats["agent_events_count"] == 0
+        assert "db_size_bytes" in stats
+
+    def test_get_storage_stats_with_data(self, memory):
+        """get_storage_stats returns correct counts."""
+        # Add some test data
+        memory.store("key1", "value1")
+        memory.store("key2", "value2")
+        memory.log_run_start("run1", "agent1", "task1")
+        memory.upsert_agent_health(AgentHealth(agent_name="agent1"))
+        memory.insert_agent_event(
+            AgentEvent(id="evt1", agent_name="agent1", event_type=AgentEventType.HEARTBEAT)
+        )
+
+        stats = memory.get_storage_stats()
+
+        assert stats["memories_count"] == 2
+        assert stats["agent_runs_count"] == 1
+        assert stats["agent_health_count"] == 1
+        assert stats["agent_events_count"] == 1
+
+    def test_get_storage_stats_time_ranges(self, memory):
+        """get_storage_stats includes time range info."""
+        memory.log_run_start("run1", "agent1", "task1")
+        memory.insert_agent_event(
+            AgentEvent(id="evt1", agent_name="agent1", event_type=AgentEventType.HEARTBEAT)
+        )
+
+        stats = memory.get_storage_stats()
+
+        # Should have time range info for agent_runs and agent_events
+        assert "agent_runs_oldest" in stats or stats["agent_runs_count"] > 0
+        assert "agent_events_oldest" in stats or stats["agent_events_count"] > 0
+
+    def test_cleanup_old_runs_removes_old_data(self, memory):
+        """cleanup_old_runs removes runs older than threshold."""
+        # Insert runs with manual timestamps
+        memory.conn.execute("""
+            INSERT INTO agent_runs (id, agent_name, task, status, started_at)
+            VALUES
+                ('old-run', 'agent1', 'old task', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY),
+                ('new-run', 'agent1', 'new task', 'completed', CURRENT_TIMESTAMP)
+        """)
+
+        deleted = memory.cleanup_old_runs(days=30)
+
+        assert deleted == 1
+        # Verify old run is gone
+        result = memory.conn.execute(
+            "SELECT id FROM agent_runs WHERE id = 'old-run'"
+        ).fetchone()
+        assert result is None
+
+        # Verify new run remains
+        result = memory.conn.execute(
+            "SELECT id FROM agent_runs WHERE id = 'new-run'"
+        ).fetchone()
+        assert result is not None
+
+    def test_cleanup_old_events_removes_old_data(self, memory):
+        """cleanup_old_events removes events older than threshold."""
+        import json
+
+        # Insert events with manual timestamps
+        memory.conn.execute("""
+            INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
+            VALUES
+                ('old-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP - INTERVAL 14 DAY),
+                ('new-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP)
+        """)
+
+        deleted = memory.cleanup_old_events(days=7)
+
+        assert deleted == 1
+
+    def test_cleanup_old_tasks_removes_old_data(self, memory):
+        """cleanup_old_tasks removes task log entries older than threshold."""
+        memory.conn.execute("""
+            INSERT INTO task_log (id, description, status, created_at)
+            VALUES
+                ('old-task', 'old description', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY),
+                ('new-task', 'new description', 'completed', CURRENT_TIMESTAMP)
+        """)
+
+        deleted = memory.cleanup_old_tasks(days=30)
+
+        assert deleted == 1
+
+    def test_cleanup_memories_by_namespace(self, memory):
+        """cleanup_memories_by_namespace removes all memories in namespace."""
+        memory.store("key1", "value1", namespace="temp")
+        memory.store("key2", "value2", namespace="temp")
+        memory.store("key3", "value3", namespace="persistent")
+
+        deleted = memory.cleanup_memories_by_namespace("temp")
+
+        assert deleted == 2
+
+        # Verify temp namespace is cleared
+        results = memory.query("key", namespace="temp")
+        assert len(results) == 0
+
+        # Verify persistent namespace remains
+        results = memory.query("key", namespace="persistent")
+        assert len(results) == 1
+
+    def test_cleanup_old_memories_removes_old_data(self, memory):
+        """cleanup_old_memories removes memories older than threshold."""
+        # Insert memories with manual timestamps
+        memory.conn.execute("""
+            INSERT INTO memories (key, value, namespace, metadata, created_at)
+            VALUES
+                ('old-key', 'old value', 'default', '{}', CURRENT_TIMESTAMP - INTERVAL 120 DAY),
+                ('new-key', 'new value', 'default', '{}', CURRENT_TIMESTAMP)
+        """)
+
+        deleted = memory.cleanup_old_memories(days=90)
+
+        assert deleted == 1
+
+    def test_run_full_cleanup(self, memory):
+        """run_full_cleanup cleans up all tables."""
+        # Insert old data in all tables
+        memory.conn.execute("""
+            INSERT INTO agent_runs (id, agent_name, task, status, started_at)
+            VALUES ('old-run', 'agent1', 'task', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY)
+        """)
+        memory.conn.execute("""
+            INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
+            VALUES ('old-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP - INTERVAL 14 DAY)
+        """)
+        memory.conn.execute("""
+            INSERT INTO task_log (id, description, status, created_at)
+            VALUES ('old-task', 'desc', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY)
+        """)
+
+        deleted = memory.run_full_cleanup(
+            runs_days=30,
+            events_days=7,
+            tasks_days=30,
+            memories_days=None,  # Don't clean memories
+        )
+
+        assert deleted["agent_runs"] == 1
+        assert deleted["agent_events"] == 1
+        assert deleted["task_log"] == 1
+        assert "memories" not in deleted  # Should not be cleaned
+
+    def test_run_full_cleanup_with_memories(self, memory):
+        """run_full_cleanup can include memories cleanup."""
+        memory.conn.execute("""
+            INSERT INTO memories (key, value, namespace, metadata, created_at)
+            VALUES ('old-mem', 'old', 'default', '{}', CURRENT_TIMESTAMP - INTERVAL 120 DAY)
+        """)
+
+        deleted = memory.run_full_cleanup(memories_days=90)
+
+        assert deleted["memories"] == 1
+
+    def test_vacuum(self, memory):
+        """vacuum runs without error."""
+        # Add and delete data to create fragmentation
+        for i in range(10):
+            memory.store(f"key{i}", "x" * 1000)
+        for i in range(10):
+            memory.delete(f"key{i}")
+
+        # Should not raise
+        memory.vacuum()
+
+    def test_cleanup_preserves_recent_data(self, memory):
+        """Cleanup operations preserve data within retention period."""
+        # Insert recent data
+        memory.log_run_start("recent-run", "agent1", "recent task")
+        memory.insert_agent_event(
+            AgentEvent(id="recent-evt", agent_name="agent1", event_type=AgentEventType.HEARTBEAT)
+        )
+        memory.store("recent-key", "recent value")
+
+        # Run cleanup with default retention
+        deleted = memory.run_full_cleanup()
+
+        # Verify recent data is preserved
+        result = memory.conn.execute(
+            "SELECT id FROM agent_runs WHERE id = 'recent-run'"
+        ).fetchone()
+        assert result is not None
+
+        assert memory.get("recent-key") == "recent value"

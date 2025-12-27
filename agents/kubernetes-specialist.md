@@ -26,6 +26,30 @@ description: |
   </example>
 model: sonnet
 color: magenta
+triggers:
+  - kubernetes
+  - k8s
+  - kubectl
+  - helm
+  - helm chart
+  - deployment
+  - statefulset
+  - daemonset
+  - pod
+  - service
+  - ingress
+  - configmap
+  - secret
+  - pvc
+  - persistentvolume
+  - hpa
+  - horizontal pod autoscaler
+  - eks
+  - gke
+  - aks
+  - kustomize
+  - argocd
+  - oomkilled
 ---
 
 You are a **Kubernetes Expert** specializing in container orchestration for data engineering workloads, Helm charts, and cloud-managed Kubernetes (EKS, GKE, AKS).

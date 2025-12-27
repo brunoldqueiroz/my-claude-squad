@@ -76,11 +76,13 @@ class TestAgentRegistryTriggers:
     """Tests for trigger extraction."""
 
     def test_extracts_triggers_from_examples(self, temp_agents_dir):
-        """Extracts quoted strings from <example> tags."""
+        """Extracts key words from <example> tags."""
         registry = AgentRegistry(agents_dir=temp_agents_dir)
 
         agent = registry.get_agent("test-agent-1")
-        assert "write a python script" in agent.triggers
+        # New extraction extracts individual words, not full phrases
+        assert "write" in agent.triggers
+        assert "script" in agent.triggers
 
     def test_extracts_tech_keywords(self, temp_agents_dir):
         """Extracts technology keywords from description."""
@@ -88,6 +90,206 @@ class TestAgentRegistryTriggers:
 
         agent = registry.get_agent("test-agent-1")
         assert "python" in agent.triggers
+
+
+class TestAgentRegistryTriggerExtraction:
+    """Detailed tests for the improved trigger extraction."""
+
+    def test_extracts_from_commentary_tags(self, tmp_path):
+        """Extracts triggers from <commentary> tags."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-commentary
+description: |
+  Test agent for commentary extraction.
+  <example>
+  user: "example request"
+  <commentary>PySpark data processing task</commentary>
+  </example>
+model: sonnet
+---
+Body content here.
+'''
+        (agents_dir / "test-commentary.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-commentary")
+
+        assert "pyspark" in agent.triggers
+        assert "data" in agent.triggers
+        assert "processing" in agent.triggers
+        assert "task" in agent.triggers
+
+    def test_extracts_bold_text(self, tmp_path):
+        """Extracts triggers from **bold** text."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-bold
+description: Test agent.
+model: sonnet
+---
+You are a **Data Engineer** specialist.
+
+## Core Expertise
+- **Apache Spark** processing
+- **Delta Lake** integration
+'''
+        (agents_dir / "test-bold.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-bold")
+
+        assert "data engineer" in agent.triggers
+        assert "apache spark" in agent.triggers
+        assert "delta lake" in agent.triggers
+
+    def test_extracts_from_headings(self, tmp_path):
+        """Extracts triggers from ## and ### headings."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-headings
+description: Test agent.
+model: sonnet
+---
+## Spark Fundamentals
+
+### DataFrame Operations
+
+### Structured Streaming
+'''
+        (agents_dir / "test-headings.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-headings")
+
+        assert "spark fundamentals" in agent.triggers
+        assert "dataframe operations" in agent.triggers
+        assert "structured streaming" in agent.triggers
+
+    def test_extracts_from_table_cells(self, tmp_path):
+        """Extracts triggers from table first column."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-tables
+description: Test agent.
+model: sonnet
+---
+| Database | Best For |
+|----------|----------|
+| ChromaDB | Prototyping |
+| Qdrant | Production |
+| Pinecone | Managed |
+'''
+        (agents_dir / "test-tables.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-tables")
+
+        assert "chromadb" in agent.triggers
+        assert "qdrant" in agent.triggers
+        assert "pinecone" in agent.triggers
+
+    def test_extracts_python_imports(self, tmp_path):
+        """Extracts triggers from Python import statements."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-imports
+description: Test agent.
+model: sonnet
+---
+```python
+from pyspark.sql import SparkSession
+import chromadb
+from qdrant_client import QdrantClient
+```
+'''
+        (agents_dir / "test-imports.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-imports")
+
+        assert "pyspark" in agent.triggers
+        assert "chromadb" in agent.triggers
+        assert "qdrant_client" in agent.triggers
+
+    def test_extracts_technology_patterns(self, tmp_path):
+        """Extracts compound technology names."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-patterns
+description: Test agent.
+model: sonnet
+---
+This agent handles PySpark jobs, Delta Lake tables, and Apache Kafka streams.
+It also works with ChromaDB and DuckDB.
+'''
+        (agents_dir / "test-patterns.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-patterns")
+
+        assert "pyspark" in agent.triggers
+        assert "delta lake" in agent.triggers
+        assert "chromadb" in agent.triggers
+        assert "duckdb" in agent.triggers
+
+    def test_skips_generic_headings(self, tmp_path):
+        """Skips generic headings like 'Core Expertise'."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-generic
+description: Test agent.
+model: sonnet
+---
+## Core Expertise
+
+## Overview
+
+## RESEARCH-FIRST PROTOCOL
+'''
+        (agents_dir / "test-generic.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-generic")
+
+        assert "core expertise" not in agent.triggers
+        assert "overview" not in agent.triggers
+        assert "research-first protocol" not in agent.triggers
+
+    def test_triggers_are_lowercased(self, tmp_path):
+        """All triggers are lowercased."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+
+        agent_content = '''---
+name: test-lowercase
+description: Test agent.
+model: sonnet
+---
+Uses **Apache Spark** and **PyTorch**.
+'''
+        (agents_dir / "test-lowercase.md").write_text(agent_content)
+
+        registry = AgentRegistry(agents_dir=agents_dir)
+        agent = registry.get_agent("test-lowercase")
+
+        # All triggers should be lowercase
+        for trigger in agent.triggers:
+            assert trigger == trigger.lower()
 
 
 class TestAgentRegistryListing:

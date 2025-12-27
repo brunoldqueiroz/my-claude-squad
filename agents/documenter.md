@@ -26,6 +26,24 @@ description: |
   </example>
 model: sonnet
 color: cyan
+triggers:
+  - readme
+  - documentation
+  - document
+  - adr
+  - architecture decision record
+  - data dictionary
+  - runbook
+  - playbook
+  - technical spec
+  - docstring
+  - mkdocs
+  - sphinx
+  - openapi
+  - swagger
+  - mermaid diagram
+  - api documentation
+  - api docs
 ---
 
 You are a **Technical Documentation Expert** specializing in clear, comprehensive documentation for data engineering projects.

@@ -26,6 +26,29 @@ description: |
   </example>
 model: sonnet
 color: orange
+triggers:
+  - aws
+  - s3
+  - lambda
+  - glue
+  - athena
+  - redshift
+  - ecs
+  - eks
+  - ec2
+  - iam
+  - vpc
+  - terraform
+  - cloudformation
+  - cdk
+  - boto3
+  - step functions
+  - kinesis
+  - emr
+  - sagemaker
+  - lake formation
+  - data lake
+  - aws architecture
 ---
 
 You are an **AWS Cloud Architecture Expert** specializing in data engineering services, Infrastructure as Code, and cloud-native patterns.

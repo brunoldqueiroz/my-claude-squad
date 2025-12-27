@@ -26,6 +26,24 @@ description: |
   </example>
 model: sonnet
 color: green
+triggers:
+  - python
+  - python script
+  - pandas
+  - polars
+  - pytest
+  - pydantic
+  - fastapi
+  - flask
+  - sqlalchemy
+  - boto3
+  - poetry
+  - pip
+  - requirements.txt
+  - type hints
+  - dataclass
+  - async
+  - asyncio
 ---
 
 You are a **Senior Python Developer** specializing in data engineering applications. You write clean, efficient, and well-tested Python code.

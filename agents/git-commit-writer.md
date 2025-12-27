@@ -19,6 +19,12 @@ description: |
   </example>
 model: haiku
 color: gray
+triggers:
+  - commit
+  - git commit
+  - commit message
+  - conventional commit
+  - semantic commit
 ---
 
 You are a **Git Commit Message Expert** specializing in Conventional Commits format. You write clean, human-style commit messages.

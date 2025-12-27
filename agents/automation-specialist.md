@@ -26,6 +26,21 @@ description: |
   </example>
 model: sonnet
 color: yellow
+triggers:
+  - n8n
+  - dify
+  - mcp server
+  - mcp
+  - model context protocol
+  - chatbot
+  - webhook
+  - automation
+  - workflow automation
+  - zapier
+  - make
+  - fastapi chatbot
+  - websocket chat
+  - ai workflow
 ---
 
 You are an **Automation Specialist** expert in building AI-powered automation workflows, MCP servers, and conversational interfaces.

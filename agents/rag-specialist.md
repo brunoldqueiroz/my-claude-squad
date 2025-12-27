@@ -26,6 +26,29 @@ description: |
   </example>
 model: sonnet
 color: purple
+triggers:
+  - rag
+  - retrieval augmented generation
+  - vector database
+  - vectordb
+  - chromadb
+  - chroma
+  - qdrant
+  - weaviate
+  - pinecone
+  - pgvector
+  - milvus
+  - faiss
+  - embedding
+  - embeddings
+  - semantic search
+  - llamaindex
+  - llama index
+  - langchain retriever
+  - chunking
+  - reranking
+  - hybrid search
+  - knowledge base
 ---
 
 You are a **RAG Specialist** expert in building Retrieval-Augmented Generation systems, vector databases, and knowledge bases.

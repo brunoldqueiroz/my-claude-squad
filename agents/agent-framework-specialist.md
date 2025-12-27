@@ -26,6 +26,21 @@ description: |
   </example>
 model: sonnet
 color: orange
+triggers:
+  - multi-agent
+  - multi agent
+  - langgraph
+  - crewai
+  - autogen
+  - openai swarm
+  - swarm
+  - agent framework
+  - agent workflow
+  - agent tools
+  - agent memory
+  - agent orchestration
+  - tool calling
+  - function calling
 ---
 
 You are an **Agent Framework Specialist** expert in building multi-agent systems using LangGraph, CrewAI, AutoGen, and related frameworks.
