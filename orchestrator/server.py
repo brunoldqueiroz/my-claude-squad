@@ -126,6 +126,7 @@ def list_agents() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="route_task")
 def route_task(task: str) -> dict[str, Any]:
     """Find the best agent to handle a given task.
 
@@ -158,6 +159,7 @@ def route_task(task: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="spawn_agent")
 def spawn_agent(agent_name: str, task: str) -> dict[str, Any]:
     """Spawn a specific agent to perform a task.
 
@@ -466,6 +468,7 @@ def submit_decomposition(
 
 
 @mcp.tool()
+@observe(name="memory_store")
 def memory_store(key: str, value: str, namespace: str = "default") -> dict[str, Any]:
     """Store a key-value pair in persistent memory.
 
@@ -671,6 +674,7 @@ def swarm_status() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="complete_run")
 def complete_run(
     task_id: str, result: str | None = None, success: bool = True, tokens_used: int = 0
 ) -> dict[str, Any]:
@@ -849,6 +853,7 @@ def set_agent_status(agent_name: str, status: str, reason: str | None = None) ->
 
 
 @mcp.tool()
+@observe(name="create_dependent_task")
 def create_dependent_task(
     task: str,
     depends_on: list[str] | None = None,
@@ -955,6 +960,7 @@ def get_ready_tasks() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="complete_scheduled_task")
 def complete_scheduled_task(
     task_id: str,
     success: bool = True,
@@ -997,6 +1003,7 @@ def complete_scheduled_task(
 
 
 @mcp.tool()
+@observe(name="execute_workflow")
 def execute_workflow(tasks: list[dict[str, Any]]) -> dict[str, Any]:
     """Execute a workflow of tasks with dependencies.
 
@@ -1487,6 +1494,7 @@ def lookup_docs(library: str, topic: str | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="create_swarm")
 def create_swarm(
     name: str,
     topology: str,
@@ -1731,6 +1739,7 @@ def get_swarm_delegation(
 
 
 @mcp.tool()
+@observe(name="create_swarm_workflow")
 def create_swarm_workflow(
     swarm_id: str,
     task_description: str,
@@ -1805,6 +1814,7 @@ def create_swarm_workflow(
 
 
 @mcp.tool()
+@observe(name="create_session")
 def create_session(
     name: str,
     tasks: list[dict[str, Any]] | None = None,
@@ -1857,6 +1867,7 @@ def create_session(
 
 
 @mcp.tool()
+@observe(name="create_session_from_swarm")
 def create_session_from_swarm(
     name: str,
     swarm_id: str,
@@ -1993,6 +2004,7 @@ def list_sessions_tool(
 
 
 @mcp.tool()
+@observe(name="pause_session")
 def pause_session(session_id: str) -> dict[str, Any]:
     """Pause an active session.
 
@@ -2025,6 +2037,7 @@ def pause_session(session_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="resume_session")
 def resume_session(session_id: str) -> dict[str, Any]:
     """Resume a paused session.
 
@@ -2093,6 +2106,7 @@ def cancel_session(session_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="add_session_task")
 def add_session_task(
     session_id: str,
     description: str,
@@ -2172,6 +2186,7 @@ def start_session_task(session_id: str, task_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="complete_session_task")
 def complete_session_task(
     session_id: str,
     task_id: str,
@@ -2520,6 +2535,7 @@ def list_hook_types() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="semantic_store")
 def semantic_store(
     key: str,
     value: str,
@@ -2569,6 +2585,7 @@ def semantic_store(
 
 
 @mcp.tool()
+@observe(name="semantic_search")
 def semantic_search(
     query: str,
     namespace: str | None = None,
@@ -2626,6 +2643,7 @@ def semantic_search(
 
 
 @mcp.tool()
+@observe(name="semantic_store_batch")
 def semantic_store_batch(
     items: list[dict[str, Any]],
     namespace: str = "default",
