@@ -374,6 +374,7 @@ Semantic memory provides vector-based similarity search using sentence-transform
 
 ```bash
 uv sync --extra semantic  # Install sentence-transformers + numpy
+uv sync --extra ann       # Install with ANN support (hnswlib) for large datasets
 ```
 
 ### Usage
@@ -397,13 +398,34 @@ results = semantic_search("coding languages", namespace="docs", top_k=5)
 - **Batch Operations**: `semantic_store_batch` for efficient bulk storage
 - **Namespace Support**: Organize memories by domain
 - **Reindexing**: `semantic_reindex` regenerates all embeddings (after model change)
+- **ANN Support**: Optional HNSW index for O(log n) search on large datasets
+
+### ANN (Approximate Nearest Neighbor)
+
+For datasets larger than ~10K memories, enable ANN for fast similarity search:
+
+```python
+from orchestrator.semantic_memory import SemanticMemory, is_ann_available
+
+if is_ann_available():
+    memory = SemanticMemory(use_ann=True, ann_threshold=1000)
+    memory.build_ann_index()  # Build from existing embeddings
+```
+
+**Features:**
+- **HNSW Algorithm**: O(log n) search time vs O(n) brute force
+- **Auto-scaling**: Index resizes automatically as data grows
+- **Persistence**: Index saved to `.swarm/ann_index.bin`
+- **Threshold-based**: Falls back to brute force below threshold
+- **Namespace caveat**: ANN doesn't support namespace filtering (falls back to brute force)
 
 ### Technical Details
 
 - **Model**: all-MiniLM-L6-v2 (384 dimensions, ~80MB)
 - **Storage**: Embeddings stored as JSON arrays in DuckDB
 - **Similarity**: Cosine similarity (0-1, higher = more similar)
-- **Search**: In-memory similarity calculation (scales to ~10K memories)
+- **Search**: Brute force for small datasets, HNSW for large (>1000 default)
+- **ANN Library**: hnswlib (optional, install with `--extra ann`)
 
 ### Tools
 

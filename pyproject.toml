@@ -29,6 +29,11 @@ semantic = [
     "sentence-transformers>=2.2.0",
     "numpy>=1.26.0",
 ]
+ann = [
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.26.0",
+    "hnswlib>=0.8.0",
+]
 
 [build-system]
 requires = ["hatchling"]
