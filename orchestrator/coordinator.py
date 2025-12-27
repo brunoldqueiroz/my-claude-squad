@@ -246,6 +246,7 @@ class Coordinator:
 
         return agent
 
+    @observe(name="decompose_task")
     def decompose_task(self, task_description: str) -> list[tuple[str, Agent | None]]:
         """Decompose a complex task into subtasks with agent assignments.
 
@@ -277,7 +278,26 @@ class Coordinator:
         # If no decomposition happened, return original with best agent
         if len(subtasks) <= 1:
             agent = self.route_task(task_description)
+            update_span(
+                metadata={"decomposed": False, "subtask_count": 1},
+                output={"agent": agent.name if agent else None},
+            )
             return [(task_description, agent)]
+
+        # Update span with decomposition results
+        update_span(
+            metadata={
+                "decomposed": True,
+                "subtask_count": len(subtasks),
+                "task_preview": task_description[:200],
+            },
+            output={
+                "subtasks": [
+                    {"description": s[:50], "agent": a.name if a else None}
+                    for s, a in subtasks
+                ],
+            },
+        )
 
         return subtasks
 

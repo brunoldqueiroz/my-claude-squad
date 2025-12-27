@@ -10,7 +10,13 @@ from orchestrator.events import get_event_bus, create_event
 from orchestrator.metrics import get_metrics_collector
 from orchestrator.paths import get_agents_dir, get_skills_dir, get_commands_dir
 from orchestrator.scheduler import TaskScheduler
-from orchestrator.tracing import get_langfuse, is_enabled as langfuse_enabled
+from orchestrator.tracing import (
+    get_langfuse,
+    is_enabled as langfuse_enabled,
+    observe,
+    update_span,
+    update_trace,
+)
 from orchestrator.types import (
     AgentEventType,
     AgentStatus,
@@ -196,6 +202,7 @@ def spawn_agent(agent_name: str, task: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="decompose_task")
 def decompose_task(task: str) -> dict[str, Any]:
     """Decompose a complex task into subtasks with agent assignments.
 
@@ -210,6 +217,13 @@ def decompose_task(task: str) -> dict[str, Any]:
     Returns:
         Decomposition prompt with available agents and expected schema
     """
+    # Update trace with task metadata
+    update_trace(
+        user_id="decompose_task",
+        metadata={"task": task[:500], "action": "decompose"},
+        tags=["decomposition", "task-analysis"],
+    )
+
     coordinator = get_coordinator()
     agents = coordinator.registry.list_agents()
 
@@ -287,6 +301,7 @@ Consider:
 
 
 @mcp.tool()
+@observe(name="submit_decomposition")
 def submit_decomposition(
     original_task: str,
     subtasks: list[dict[str, Any]],
@@ -312,6 +327,18 @@ def submit_decomposition(
         Confirmation with created task IDs and workflow info
     """
     import uuid
+
+    # Update trace with decomposition metadata
+    update_trace(
+        user_id="submit_decomposition",
+        metadata={
+            "original_task": original_task[:500],
+            "subtask_count": len(subtasks),
+            "analysis": analysis[:200] if analysis else None,
+            "auto_schedule": auto_schedule,
+        },
+        tags=["decomposition", "submit", f"subtasks:{len(subtasks)}"],
+    )
 
     coordinator = get_coordinator()
     scheduler = get_scheduler()
@@ -353,6 +380,22 @@ def submit_decomposition(
             "priority": subtask_def.get("priority", 5),
             "reasoning": subtask_def.get("reasoning"),
         })
+
+        # Trace each subtask creation
+        update_span(
+            metadata={
+                "subtask_id": task_id,
+                "submitted_id": submitted_id,
+                "agent": agent_name,
+                "priority": subtask_def.get("priority", 5),
+                "execution_mode": exec_mode.value,
+                "depends_on": subtask_def.get("depends_on", []),
+            },
+            output={
+                "description": description[:100],
+                "reasoning": subtask_def.get("reasoning", "")[:100] if subtask_def.get("reasoning") else None,
+            },
+        )
 
     # Resolve dependency IDs
     for task_info in created_tasks:
