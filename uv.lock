@@ -543,6 +543,15 @@ wheels = [
 ]
 
 [[package]]
+name = "hnswlib"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/7a/1a9b1405f2eb59515f06c3074750b03e0e96edf7fee0f6dd6df81d9c21d7/hnswlib-0.8.0.tar.gz", hash = "sha256:cb6d037eedebb34a7134e7dc78966441dfd04c9cf5ee93911be911ced951c44c", size = 36206, upload-time = "2023-12-03T04:16:17.55Z" }
+
+[[package]]
 name = "httpcore"
 version = "1.0.9"
 source = { registry = "https://pypi.org/simple" }
@@ -993,6 +1002,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+ann = [
+    { name = "hnswlib" },
+    { name = "numpy" },
+    { name = "sentence-transformers" },
+]
 dev = [
     { name = "freezegun" },
     { name = "pytest" },
@@ -1011,7 +1025,9 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.4.3" },
     { name = "fastmcp", specifier = ">=2.14.1" },
     { name = "freezegun", marker = "extra == 'dev'", specifier = ">=1.2.0" },
+    { name = "hnswlib", marker = "extra == 'ann'", specifier = ">=0.8.0" },
     { name = "langfuse", specifier = ">=2.57.1" },
+    { name = "numpy", marker = "extra == 'ann'", specifier = ">=1.26.0" },
     { name = "numpy", marker = "extra == 'semantic'", specifier = ">=1.26.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.0" },
@@ -1021,9 +1037,10 @@ requires-dist = [
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.2.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "sentence-transformers", marker = "extra == 'ann'", specifier = ">=2.2.0" },
     { name = "sentence-transformers", marker = "extra == 'semantic'", specifier = ">=2.2.0" },
 ]
-provides-extras = ["dev", "semantic"]
+provides-extras = ["dev", "semantic", "ann"]
 
 [[package]]
 name = "networkx"
