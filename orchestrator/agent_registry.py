@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from .types import Agent, AgentModel
+from orchestrator.types import Agent, AgentModel
 
 
 class AgentRegistry:

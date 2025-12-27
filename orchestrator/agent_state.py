@@ -9,10 +9,10 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from .types import AgentEvent, AgentEventType, AgentHealth, AgentStatus
+from orchestrator.types import AgentEvent, AgentEventType, AgentHealth, AgentStatus
 
 if TYPE_CHECKING:
-    from .memory import SwarmMemory
+    from orchestrator.memory import SwarmMemory
 
 logger = logging.getLogger(__name__)
 

@@ -1,25 +1,37 @@
 """FastMCP server for my-claude-squad orchestration."""
 
-from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
 
-from .agent_state import AgentStateManager
-from .coordinator import Coordinator
-from .events import get_event_bus, create_event
-from .metrics import get_metrics_collector
-from .scheduler import TaskScheduler
-from .tracing import get_langfuse, is_enabled as langfuse_enabled
-from .types import (
+from orchestrator.agent_state import AgentStateManager
+from orchestrator.coordinator import Coordinator
+from orchestrator.events import get_event_bus, create_event
+from orchestrator.metrics import get_metrics_collector
+from orchestrator.paths import get_agents_dir, get_skills_dir, get_commands_dir
+from orchestrator.scheduler import TaskScheduler
+from orchestrator.tracing import get_langfuse, is_enabled as langfuse_enabled
+from orchestrator.types import (
     AgentEventType,
     AgentStatus,
     DecompositionResult,
     ExecutionMode,
+    SessionStatus,
     Subtask,
     Task,
     TaskStatus,
+    TopologyType,
 )
+from orchestrator.topology import TopologyManager
+from orchestrator.session import SessionManager
+from orchestrator.hooks import HooksManager, HookType, HookAbortError, get_hooks_manager
+from orchestrator.semantic_memory import (
+    SemanticMemory,
+    SemanticSearchResult,
+    is_available as semantic_is_available,
+    get_semantic_memory,
+)
+from orchestrator import command_tools
 
 # Initialize MCP server
 mcp = FastMCP("my-claude-squad")
@@ -28,16 +40,15 @@ mcp = FastMCP("my-claude-squad")
 _coordinator: Coordinator | None = None
 _agent_state_manager: AgentStateManager | None = None
 _scheduler: TaskScheduler | None = None
+_topology_manager: TopologyManager | None = None
+_session_manager: SessionManager | None = None
 
 
 def get_coordinator() -> Coordinator:
     """Get or create the coordinator singleton."""
     global _coordinator
     if _coordinator is None:
-        # Find the project root (where agents/ directory is)
-        current = Path(__file__).parent.parent
-        agents_dir = current / "agents"
-        _coordinator = Coordinator(agents_dir=agents_dir)
+        _coordinator = Coordinator(agents_dir=get_agents_dir())
     return _coordinator
 
 
@@ -56,6 +67,28 @@ def get_scheduler() -> TaskScheduler:
     if _scheduler is None:
         _scheduler = TaskScheduler()
     return _scheduler
+
+
+def get_topology_manager() -> TopologyManager:
+    """Get or create the topology manager singleton."""
+    global _topology_manager
+    if _topology_manager is None:
+        coordinator = get_coordinator()
+        _topology_manager = TopologyManager(memory=coordinator.memory)
+    return _topology_manager
+
+
+def get_session_manager() -> SessionManager:
+    """Get or create the session manager singleton."""
+    global _session_manager
+    if _session_manager is None:
+        coordinator = get_coordinator()
+        topology_mgr = get_topology_manager()
+        _session_manager = SessionManager(
+            memory=coordinator.memory,
+            topology_manager=topology_mgr,
+        )
+    return _session_manager
 
 
 # === MCP Tools ===
@@ -1208,6 +1241,1693 @@ def emit_event(
     }
 
 
+# === Command Tools (converted from markdown commands) ===
+
+
+@mcp.tool()
+def create_pipeline(
+    source: str,
+    target: str,
+    name: str = "pipeline",
+    incremental: bool = False,
+    schedule: str | None = None,
+    with_tests: bool = True,
+) -> dict[str, Any]:
+    """Generate data pipeline boilerplate for ETL/ELT workflows.
+
+    Creates a complete pipeline structure with extraction, transformation,
+    and loading components based on the specified source and target.
+
+    Args:
+        source: Data source type (api, s3, postgresql, mysql, files)
+        target: Data target type (snowflake, redshift, s3, postgresql)
+        name: Pipeline name for the directory
+        incremental: Generate incremental loading logic with watermarks
+        schedule: Cron expression for Airflow DAG (e.g., "0 6 * * *")
+        with_tests: Include pytest test files
+
+    Returns:
+        Pipeline structure with file templates and next steps
+    """
+    return command_tools.create_pipeline(source, target, name, incremental, schedule, with_tests)
+
+
+@mcp.tool()
+def analyze_query(sql: str) -> dict[str, Any]:
+    """Analyze SQL query and provide optimization recommendations.
+
+    Checks for common anti-patterns including index issues, join problems,
+    query structure issues, and performance concerns.
+
+    Args:
+        sql: SQL query to analyze (or description of slow query)
+
+    Returns:
+        Analysis with issues found and optimization suggestions
+    """
+    return command_tools.analyze_query(sql)
+
+
+@mcp.tool()
+def analyze_data(path: str, sample_size: int = 1000) -> dict[str, Any]:
+    """Profile and analyze a dataset for quality and patterns.
+
+    Returns analysis template and instructions for data profiling.
+
+    Args:
+        path: Path to the data file (CSV, Parquet, JSON)
+        sample_size: Number of rows to sample for analysis
+
+    Returns:
+        Analysis template with profiling instructions
+    """
+    return command_tools.analyze_data(path, sample_size)
+
+
+@mcp.tool()
+def create_dockerfile(
+    project_type: str = "python",
+    optimize_for: str = "size",
+    python_version: str = "3.11",
+    include_dev: bool = False,
+) -> dict[str, Any]:
+    """Create optimized Dockerfile for a project.
+
+    Generates a multi-stage Dockerfile with best practices including
+    layer caching, non-root user, and health checks.
+
+    Args:
+        project_type: Type of project (python, node, java)
+        optimize_for: Optimization target (size, speed)
+        python_version: Python version for base image
+        include_dev: Include development tools
+
+    Returns:
+        Dockerfile content and related files
+    """
+    return command_tools.create_dockerfile(project_type, optimize_for, python_version, include_dev)
+
+
+@mcp.tool()
+def create_k8s_manifest(
+    app_name: str,
+    replicas: int = 2,
+    port: int = 8000,
+    image: str = "app:latest",
+    resources_preset: str = "small",
+) -> dict[str, Any]:
+    """Generate Kubernetes manifests for an application.
+
+    Creates Deployment, Service, ConfigMap, and HorizontalPodAutoscaler
+    with production-ready defaults.
+
+    Args:
+        app_name: Name of the application
+        replicas: Number of replicas
+        port: Container port
+        image: Docker image to deploy
+        resources_preset: Resource preset (small, medium, large)
+
+    Returns:
+        Kubernetes manifest files
+    """
+    return command_tools.create_k8s_manifest(app_name, replicas, port, image, resources_preset)
+
+
+@mcp.tool()
+def scaffold_rag(
+    name: str,
+    vectordb: str = "chromadb",
+    framework: str = "langchain",
+    embedding_model: str = "text-embedding-3-small",
+) -> dict[str, Any]:
+    """Generate RAG application boilerplate.
+
+    Creates a complete RAG application structure with vector database
+    integration, document ingestion, and retrieval chain.
+
+    Args:
+        name: Application name
+        vectordb: Vector database (chromadb, qdrant, weaviate, pgvector)
+        framework: RAG framework (langchain, llamaindex)
+        embedding_model: Embedding model to use
+
+    Returns:
+        RAG application scaffold with all necessary files
+    """
+    return command_tools.scaffold_rag(name, vectordb, framework, embedding_model)
+
+
+@mcp.tool()
+def scaffold_mcp_server(
+    name: str,
+    tools: list[str],
+    transport: str = "stdio",
+) -> dict[str, Any]:
+    """Generate MCP server template.
+
+    Creates a FastMCP server with specified tools.
+
+    Args:
+        name: Server name
+        tools: List of tool names to create
+        transport: Transport type (stdio, http)
+
+    Returns:
+        MCP server scaffold with tool stubs
+    """
+    return command_tools.scaffold_mcp_server(name, tools, transport)
+
+
+@mcp.tool()
+def generate_commit_message(
+    changes_summary: str,
+    change_type: str = "feat",
+    scope: str | None = None,
+    breaking: bool = False,
+) -> dict[str, Any]:
+    """Generate a conventional commit message.
+
+    IMPORTANT: Never includes AI attribution, "Generated by Claude",
+    or any Co-Authored-By headers.
+
+    Args:
+        changes_summary: Description of changes made
+        change_type: Type (feat, fix, docs, style, refactor, perf, test, build, ci, chore)
+        scope: Optional scope (e.g., api, auth, db)
+        breaking: Whether this is a breaking change
+
+    Returns:
+        Formatted commit message ready for git commit
+    """
+    return command_tools.generate_commit_message(changes_summary, change_type, scope, breaking)
+
+
+@mcp.tool()
+def lookup_docs(library: str, topic: str | None = None) -> dict[str, Any]:
+    """Look up documentation for a library or tool.
+
+    Returns instructions for using Context7 and Exa MCPs to find
+    up-to-date documentation.
+
+    Args:
+        library: Library or framework name
+        topic: Specific topic to focus on
+
+    Returns:
+        Instructions for documentation lookup with MCP tool names
+    """
+    return command_tools.lookup_docs(library, topic)
+
+
+# === Swarm Topology Tools ===
+
+
+@mcp.tool()
+def create_swarm(
+    name: str,
+    topology: str,
+    agents: list[str],
+    coordinator: str | None = None,
+) -> dict[str, Any]:
+    """Create a new swarm with the specified topology.
+
+    Swarms coordinate multiple agents using different patterns:
+    - hierarchical: Queen-Worker delegation (coordinator delegates to workers)
+    - mesh: Peer-to-peer collaboration (all agents can communicate)
+    - ring: Sequential pipeline processing (A -> B -> C)
+    - star: Hub-spoke coordination (hub delegates to spokes)
+
+    Args:
+        name: Human-readable swarm name
+        topology: Topology pattern (hierarchical, mesh, ring, star)
+        agents: List of agent names to include
+        coordinator: Agent to act as coordinator (required for hierarchical/star)
+
+    Returns:
+        Created swarm with member details
+    """
+    topology_mgr = get_topology_manager()
+    coord = get_coordinator()
+
+    # Validate topology
+    try:
+        topo_type = TopologyType(topology)
+    except ValueError:
+        return {
+            "success": False,
+            "error": f"Invalid topology '{topology}'",
+            "valid_topologies": [t.value for t in TopologyType],
+        }
+
+    # Validate agents exist
+    for agent_name in agents:
+        agent = coord.registry.get_agent(agent_name)
+        if agent is None:
+            return {
+                "success": False,
+                "error": f"Agent '{agent_name}' not found",
+                "available_agents": [a.name for a in coord.registry.list_agents()],
+            }
+
+    # Validate coordinator for topologies that need one
+    if topo_type in (TopologyType.HIERARCHICAL, TopologyType.STAR):
+        if coordinator and coordinator not in agents:
+            return {
+                "success": False,
+                "error": f"Coordinator '{coordinator}' must be in the agents list",
+            }
+
+    try:
+        swarm = topology_mgr.create_swarm(name, topo_type, agents, coordinator)
+        return {
+            "success": True,
+            "swarm_id": swarm.id,
+            "name": swarm.name,
+            "topology": swarm.topology.value,
+            "member_count": len(swarm.members),
+            "members": [
+                {
+                    "agent": m.agent_name,
+                    "role": m.role.value,
+                    "can_delegate_to": m.can_delegate_to,
+                    "reports_to": m.reports_to,
+                }
+                for m in swarm.members
+            ],
+            "coordinator": (
+                swarm.get_coordinator().agent_name if swarm.get_coordinator() else None
+            ),
+        }
+    except ValueError as e:
+        return {
+            "success": False,
+            "error": str(e),
+        }
+
+
+@mcp.tool()
+def list_swarms(active_only: bool = True) -> dict[str, Any]:
+    """List all swarms.
+
+    Args:
+        active_only: If True, only return active swarms
+
+    Returns:
+        List of swarms with their topologies and member counts
+    """
+    topology_mgr = get_topology_manager()
+    swarms = topology_mgr.list_swarms(active_only=active_only)
+
+    return {
+        "success": True,
+        "count": len(swarms),
+        "swarms": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "topology": s.topology.value,
+                "member_count": len(s.members),
+                "active": s.active,
+                "coordinator": (
+                    s.get_coordinator().agent_name if s.get_coordinator() else None
+                ),
+            }
+            for s in swarms
+        ],
+    }
+
+
+@mcp.tool()
+def get_swarm(swarm_id: str) -> dict[str, Any]:
+    """Get detailed information about a swarm.
+
+    Args:
+        swarm_id: ID of the swarm
+
+    Returns:
+        Swarm details including all members and their roles
+    """
+    topology_mgr = get_topology_manager()
+    status = topology_mgr.get_swarm_status(swarm_id)
+
+    if "error" in status:
+        return {
+            "success": False,
+            "error": status["error"],
+        }
+
+    return {
+        "success": True,
+        **status,
+    }
+
+
+@mcp.tool()
+def delete_swarm(swarm_id: str, force: bool = False) -> dict[str, Any]:
+    """Delete or deactivate a swarm.
+
+    Args:
+        swarm_id: ID of the swarm to delete
+        force: If True, permanently delete. If False, just deactivate.
+
+    Returns:
+        Confirmation of deletion/deactivation
+    """
+    topology_mgr = get_topology_manager()
+
+    swarm = topology_mgr.get_swarm(swarm_id)
+    if not swarm:
+        return {
+            "success": False,
+            "error": f"Swarm '{swarm_id}' not found",
+        }
+
+    if force:
+        topology_mgr.delete_swarm(swarm_id)
+        return {
+            "success": True,
+            "action": "deleted",
+            "swarm_id": swarm_id,
+            "swarm_name": swarm.name,
+        }
+    else:
+        topology_mgr.deactivate_swarm(swarm_id)
+        return {
+            "success": True,
+            "action": "deactivated",
+            "swarm_id": swarm_id,
+            "swarm_name": swarm.name,
+            "message": "Use force=True to permanently delete",
+        }
+
+
+@mcp.tool()
+def get_swarm_delegation(
+    swarm_id: str,
+    from_agent: str,
+    task_description: str,
+) -> dict[str, Any]:
+    """Get the delegation target for a task within a swarm.
+
+    Based on the swarm's topology, determines which agent should
+    receive a delegated task.
+
+    Args:
+        swarm_id: ID of the swarm
+        from_agent: Agent delegating the task
+        task_description: Description of the task being delegated
+
+    Returns:
+        Delegation target and routing information
+    """
+    import uuid
+
+    topology_mgr = get_topology_manager()
+
+    swarm = topology_mgr.get_swarm(swarm_id)
+    if not swarm:
+        return {
+            "success": False,
+            "error": f"Swarm '{swarm_id}' not found",
+        }
+
+    # Find the member
+    member = next((m for m in swarm.members if m.agent_name == from_agent), None)
+    if not member:
+        return {
+            "success": False,
+            "error": f"Agent '{from_agent}' is not a member of swarm '{swarm_id}'",
+            "swarm_members": [m.agent_name for m in swarm.members],
+        }
+
+    # Create a dummy task for routing
+    task = Task(
+        id=str(uuid.uuid4())[:8],
+        description=task_description,
+        agent_name=from_agent,
+    )
+
+    target = topology_mgr.get_delegation_target(swarm_id, from_agent, task)
+
+    if not target:
+        return {
+            "success": False,
+            "error": f"Agent '{from_agent}' cannot delegate tasks in this topology",
+            "agent_role": member.role.value,
+            "can_delegate_to": member.can_delegate_to,
+        }
+
+    return {
+        "success": True,
+        "from_agent": from_agent,
+        "delegate_to": target,
+        "topology": swarm.topology.value,
+        "from_role": member.role.value,
+    }
+
+
+@mcp.tool()
+def create_swarm_workflow(
+    swarm_id: str,
+    task_description: str,
+) -> dict[str, Any]:
+    """Create workflow tasks for a swarm based on its topology.
+
+    Generates appropriate tasks based on the swarm's structure:
+    - Ring: Sequential tasks through the pipeline
+    - Hierarchical/Star: Coordinator task for delegation
+    - Mesh: Collaborative tasks for all peers
+
+    Args:
+        swarm_id: ID of the swarm
+        task_description: Description of the overall task
+
+    Returns:
+        Created workflow tasks ready for execution
+    """
+    topology_mgr = get_topology_manager()
+    scheduler = get_scheduler()
+
+    swarm = topology_mgr.get_swarm(swarm_id)
+    if not swarm:
+        return {
+            "success": False,
+            "error": f"Swarm '{swarm_id}' not found",
+        }
+
+    # Create tasks based on topology
+    tasks = topology_mgr.create_workflow_tasks(swarm_id, task_description)
+
+    if not tasks:
+        return {
+            "success": False,
+            "error": "No tasks could be created for this swarm",
+        }
+
+    # For ring topology, add dependencies (sequential)
+    if swarm.topology == TopologyType.RING:
+        for i, task in enumerate(tasks):
+            deps = [tasks[i - 1].id] if i > 0 else None
+            scheduler.add_task(task, depends_on=deps)
+    else:
+        # For other topologies, add all tasks without dependencies
+        for task in tasks:
+            scheduler.add_task(task)
+
+    ready = scheduler.get_ready_tasks()
+
+    return {
+        "success": True,
+        "swarm_id": swarm_id,
+        "swarm_name": swarm.name,
+        "topology": swarm.topology.value,
+        "task_count": len(tasks),
+        "tasks": [
+            {
+                "id": t.id,
+                "description": t.description[:80],
+                "agent": t.agent_name,
+            }
+            for t in tasks
+        ],
+        "ready_to_execute": [t.id for t in ready],
+        "execution_pattern": (
+            "sequential" if swarm.topology == TopologyType.RING else "parallel"
+        ),
+    }
+
+
+# === Session Management Tools ===
+
+
+@mcp.tool()
+def create_session(
+    name: str,
+    tasks: list[dict[str, Any]] | None = None,
+    description: str | None = None,
+    swarm_id: str | None = None,
+) -> dict[str, Any]:
+    """Create a new persistent, resumable work session.
+
+    Sessions track multi-task workflows that can be paused, resumed,
+    and persist across restarts.
+
+    Args:
+        name: Human-readable session name
+        tasks: Optional list of task dicts with 'description' and optional 'agent_name'
+        description: Optional session description
+        swarm_id: Optional swarm ID for topology-aware execution
+
+    Returns:
+        Created session with ID and initial state
+    """
+    session_mgr = get_session_manager()
+
+    # Validate swarm if provided
+    if swarm_id:
+        topology_mgr = get_topology_manager()
+        swarm = topology_mgr.get_swarm(swarm_id)
+        if not swarm:
+            return {
+                "success": False,
+                "error": f"Swarm '{swarm_id}' not found",
+            }
+
+    session = session_mgr.create_session(
+        name=name,
+        tasks=tasks,
+        description=description,
+        swarm_id=swarm_id,
+    )
+
+    return {
+        "success": True,
+        "session_id": session.id,
+        "name": session.name,
+        "description": session.description,
+        "status": session.status.value,
+        "task_count": len(session.tasks),
+        "swarm_id": session.swarm_id,
+        "created_at": session.created_at.isoformat(),
+    }
+
+
+@mcp.tool()
+def create_session_from_swarm(
+    name: str,
+    swarm_id: str,
+    task_description: str,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """Create a session with tasks generated from a swarm's topology.
+
+    Uses the swarm's coordination pattern to generate appropriate tasks:
+    - Ring: Sequential tasks through the pipeline
+    - Hierarchical/Star: Coordinator task for delegation
+    - Mesh: Collaborative tasks for all peers
+
+    Args:
+        name: Human-readable session name
+        swarm_id: ID of the swarm to use
+        task_description: Description of the overall task
+        description: Optional session description
+
+    Returns:
+        Created session with topology-generated tasks
+    """
+    session_mgr = get_session_manager()
+
+    session = session_mgr.create_session_from_swarm(
+        name=name,
+        swarm_id=swarm_id,
+        task_description=task_description,
+        description=description,
+    )
+
+    if not session:
+        return {
+            "success": False,
+            "error": f"Could not create session from swarm '{swarm_id}'",
+            "hint": "Ensure the swarm exists and has at least one member",
+        }
+
+    return {
+        "success": True,
+        "session_id": session.id,
+        "name": session.name,
+        "status": session.status.value,
+        "task_count": len(session.tasks),
+        "tasks": [
+            {
+                "task_id": t.task_id,
+                "description": t.description[:80],
+                "agent": t.agent_name,
+            }
+            for t in session.tasks
+        ],
+        "swarm_id": session.swarm_id,
+    }
+
+
+@mcp.tool()
+def get_session_info(session_id: str) -> dict[str, Any]:
+    """Get detailed information about a session.
+
+    Args:
+        session_id: ID of the session
+
+    Returns:
+        Session details including tasks and progress
+    """
+    session_mgr = get_session_manager()
+    status = session_mgr.get_session_status(session_id)
+
+    if "error" in status:
+        return {
+            "success": False,
+            **status,
+        }
+
+    return {
+        "success": True,
+        **status,
+    }
+
+
+@mcp.tool()
+def list_sessions_tool(
+    status: str | None = None,
+    active_only: bool = False,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """List sessions with optional filtering.
+
+    Args:
+        status: Optional status filter (active, paused, completed, failed, cancelled)
+        active_only: If True, only return active/paused sessions
+        limit: Maximum results to return
+
+    Returns:
+        List of sessions with summary information
+    """
+    session_mgr = get_session_manager()
+
+    # Parse status if provided
+    parsed_status = None
+    if status is not None:
+        try:
+            parsed_status = SessionStatus(status)
+        except ValueError:
+            return {
+                "success": False,
+                "error": f"Invalid status '{status}'",
+                "valid_statuses": [s.value for s in SessionStatus],
+            }
+
+    sessions = session_mgr.list_sessions(
+        status=parsed_status,
+        active_only=active_only,
+        limit=limit,
+    )
+
+    return {
+        "success": True,
+        "count": len(sessions),
+        "sessions": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "status": s.status.value,
+                "progress": round(s.progress, 2),
+                "task_count": len(s.tasks),
+                "swarm_id": s.swarm_id,
+                "updated_at": s.updated_at.isoformat(),
+            }
+            for s in sessions
+        ],
+    }
+
+
+@mcp.tool()
+def pause_session(session_id: str) -> dict[str, Any]:
+    """Pause an active session.
+
+    Paused sessions can be resumed later to continue where they left off.
+
+    Args:
+        session_id: ID of the session to pause
+
+    Returns:
+        Updated session status
+    """
+    session_mgr = get_session_manager()
+    session = session_mgr.pause_session(session_id)
+
+    if not session:
+        return {
+            "success": False,
+            "error": f"Could not pause session '{session_id}'",
+            "hint": "Session may not exist or may not be active",
+        }
+
+    return {
+        "success": True,
+        "session_id": session.id,
+        "name": session.name,
+        "status": session.status.value,
+        "paused_at": session.paused_at.isoformat() if session.paused_at else None,
+        "progress": round(session.progress, 2),
+    }
+
+
+@mcp.tool()
+def resume_session(session_id: str) -> dict[str, Any]:
+    """Resume a paused session.
+
+    Continues the session from where it was paused.
+
+    Args:
+        session_id: ID of the session to resume
+
+    Returns:
+        Updated session status with next task info
+    """
+    session_mgr = get_session_manager()
+    session = session_mgr.resume_session(session_id)
+
+    if not session:
+        return {
+            "success": False,
+            "error": f"Could not resume session '{session_id}'",
+            "hint": "Session may not exist or may not be paused",
+        }
+
+    current_task = session.current_task
+
+    return {
+        "success": True,
+        "session_id": session.id,
+        "name": session.name,
+        "status": session.status.value,
+        "progress": round(session.progress, 2),
+        "current_task": {
+            "task_id": current_task.task_id,
+            "description": current_task.description,
+            "agent": current_task.agent_name,
+        } if current_task else None,
+    }
+
+
+@mcp.tool()
+def cancel_session(session_id: str) -> dict[str, Any]:
+    """Cancel a session.
+
+    Cancelled sessions cannot be resumed.
+
+    Args:
+        session_id: ID of the session to cancel
+
+    Returns:
+        Confirmation of cancellation
+    """
+    session_mgr = get_session_manager()
+    session = session_mgr.cancel_session(session_id)
+
+    if not session:
+        return {
+            "success": False,
+            "error": f"Could not cancel session '{session_id}'",
+        }
+
+    return {
+        "success": True,
+        "session_id": session.id,
+        "name": session.name,
+        "status": session.status.value,
+        "cancelled_at": session.completed_at.isoformat() if session.completed_at else None,
+    }
+
+
+@mcp.tool()
+def add_session_task(
+    session_id: str,
+    description: str,
+    agent_name: str | None = None,
+) -> dict[str, Any]:
+    """Add a new task to an existing session.
+
+    Args:
+        session_id: ID of the session
+        description: Task description
+        agent_name: Optional agent to assign
+
+    Returns:
+        Created task information
+    """
+    session_mgr = get_session_manager()
+    coordinator = get_coordinator()
+
+    # Validate agent if provided
+    if agent_name:
+        agent = coordinator.registry.get_agent(agent_name)
+        if agent is None:
+            return {
+                "success": False,
+                "error": f"Agent '{agent_name}' not found",
+                "available_agents": [a.name for a in coordinator.registry.list_agents()],
+            }
+
+    task = session_mgr.add_task(session_id, description, agent_name)
+
+    if not task:
+        return {
+            "success": False,
+            "error": f"Could not add task to session '{session_id}'",
+            "hint": "Session may not exist or may be completed/cancelled",
+        }
+
+    return {
+        "success": True,
+        "session_id": session_id,
+        "task_id": task.task_id,
+        "description": task.description,
+        "agent": task.agent_name,
+        "order": task.order,
+    }
+
+
+@mcp.tool()
+def start_session_task(session_id: str, task_id: str) -> dict[str, Any]:
+    """Mark a session task as in progress.
+
+    Args:
+        session_id: ID of the session
+        task_id: ID of the task to start
+
+    Returns:
+        Updated task status
+    """
+    session_mgr = get_session_manager()
+    task = session_mgr.start_task(session_id, task_id)
+
+    if not task:
+        return {
+            "success": False,
+            "error": f"Could not start task '{task_id}'",
+            "hint": "Task may not exist or may not be pending",
+        }
+
+    return {
+        "success": True,
+        "session_id": session_id,
+        "task_id": task.task_id,
+        "description": task.description,
+        "status": task.status.value,
+        "started_at": task.started_at.isoformat() if task.started_at else None,
+    }
+
+
+@mcp.tool()
+def complete_session_task(
+    session_id: str,
+    task_id: str,
+    result: str | None = None,
+    success: bool = True,
+) -> dict[str, Any]:
+    """Mark a session task as completed or failed.
+
+    If all tasks are complete, the session will be marked as completed
+    (or failed if any task failed).
+
+    Args:
+        session_id: ID of the session
+        task_id: ID of the task to complete
+        result: Optional result text or error message
+        success: Whether the task succeeded
+
+    Returns:
+        Updated task and session status
+    """
+    session_mgr = get_session_manager()
+    task = session_mgr.complete_task(session_id, task_id, result, success)
+
+    if not task:
+        return {
+            "success": False,
+            "error": f"Could not complete task '{task_id}'",
+        }
+
+    # Get updated session info
+    session = session_mgr.get_session(session_id)
+    progress_info = session_mgr.get_session_progress(session_id)
+
+    return {
+        "success": True,
+        "session_id": session_id,
+        "task_id": task.task_id,
+        "task_status": task.status.value,
+        "task_result": task.result[:100] if task.result and len(task.result) > 100 else task.result,
+        "session_status": session.status.value if session else "unknown",
+        "session_progress": progress_info["progress"] if progress_info else 0,
+        "next_task": progress_info.get("current_task") if progress_info else None,
+    }
+
+
+@mcp.tool()
+def get_session_progress(session_id: str) -> dict[str, Any]:
+    """Get detailed progress information for a session.
+
+    Args:
+        session_id: ID of the session
+
+    Returns:
+        Progress details including task counts and current task
+    """
+    session_mgr = get_session_manager()
+    progress = session_mgr.get_session_progress(session_id)
+
+    if not progress:
+        return {
+            "success": False,
+            "error": f"Session '{session_id}' not found",
+        }
+
+    return {
+        "success": True,
+        **progress,
+    }
+
+
+@mcp.tool()
+def delete_session_tool(session_id: str) -> dict[str, Any]:
+    """Delete a session.
+
+    Args:
+        session_id: ID of the session to delete
+
+    Returns:
+        Confirmation of deletion
+    """
+    session_mgr = get_session_manager()
+    session = session_mgr.get_session(session_id)
+
+    if not session:
+        return {
+            "success": False,
+            "error": f"Session '{session_id}' not found",
+        }
+
+    session_name = session.name
+    deleted = session_mgr.delete_session(session_id)
+
+    return {
+        "success": deleted,
+        "session_id": session_id,
+        "session_name": session_name,
+        "message": "Session deleted" if deleted else "Failed to delete session",
+    }
+
+
+# === Hooks Tools ===
+
+
+@mcp.tool()
+def list_hooks(
+    hook_type: str | None = None,
+    enabled_only: bool = False,
+) -> dict[str, Any]:
+    """List all registered hooks.
+
+    Hooks are pre/post operation interceptors that can modify data
+    or abort operations.
+
+    Args:
+        hook_type: Optional filter by hook type
+        enabled_only: If True, only return enabled hooks
+
+    Returns:
+        List of registered hooks with metadata
+    """
+    hooks_mgr = get_hooks_manager()
+
+    # Parse hook type if provided
+    parsed_type = None
+    if hook_type is not None:
+        try:
+            parsed_type = HookType(hook_type)
+        except ValueError:
+            return {
+                "success": False,
+                "error": f"Invalid hook type '{hook_type}'",
+                "valid_types": [t.value for t in HookType],
+            }
+
+    hooks = hooks_mgr.list_hooks(hook_type=parsed_type, enabled_only=enabled_only)
+
+    return {
+        "success": True,
+        "count": len(hooks),
+        "hooks": [
+            {
+                "name": h.name,
+                "type": h.hook_type.value,
+                "priority": h.priority,
+                "enabled": h.enabled,
+                "call_count": h.call_count,
+                "error_count": h.error_count,
+            }
+            for h in hooks
+        ],
+    }
+
+
+@mcp.tool()
+def get_hook_info(name: str) -> dict[str, Any]:
+    """Get detailed information about a hook.
+
+    Args:
+        name: Name of the hook
+
+    Returns:
+        Hook details including stats and configuration
+    """
+    hooks_mgr = get_hooks_manager()
+    info = hooks_mgr.get_hook_info(name)
+
+    if not info:
+        return {
+            "success": False,
+            "error": f"Hook '{name}' not found",
+        }
+
+    return {
+        "success": True,
+        **info,
+    }
+
+
+@mcp.tool()
+def enable_hook(name: str) -> dict[str, Any]:
+    """Enable a disabled hook.
+
+    Args:
+        name: Name of the hook to enable
+
+    Returns:
+        Updated hook status
+    """
+    hooks_mgr = get_hooks_manager()
+
+    if not hooks_mgr.enable(name):
+        return {
+            "success": False,
+            "error": f"Hook '{name}' not found",
+        }
+
+    return {
+        "success": True,
+        "name": name,
+        "enabled": True,
+        "message": f"Hook '{name}' is now enabled",
+    }
+
+
+@mcp.tool()
+def disable_hook(name: str) -> dict[str, Any]:
+    """Disable a hook without removing it.
+
+    Disabled hooks are skipped during execution but remain registered.
+
+    Args:
+        name: Name of the hook to disable
+
+    Returns:
+        Updated hook status
+    """
+    hooks_mgr = get_hooks_manager()
+
+    if not hooks_mgr.disable(name):
+        return {
+            "success": False,
+            "error": f"Hook '{name}' not found",
+        }
+
+    return {
+        "success": True,
+        "name": name,
+        "enabled": False,
+        "message": f"Hook '{name}' is now disabled",
+    }
+
+
+@mcp.tool()
+def unregister_hook(name: str) -> dict[str, Any]:
+    """Unregister and remove a hook.
+
+    Args:
+        name: Name of the hook to remove
+
+    Returns:
+        Confirmation of removal
+    """
+    hooks_mgr = get_hooks_manager()
+
+    if not hooks_mgr.unregister(name):
+        return {
+            "success": False,
+            "error": f"Hook '{name}' not found",
+        }
+
+    return {
+        "success": True,
+        "name": name,
+        "message": f"Hook '{name}' has been unregistered",
+    }
+
+
+@mcp.tool()
+def get_hooks_stats() -> dict[str, Any]:
+    """Get hooks system statistics.
+
+    Returns hook counts, run counts, and error statistics.
+
+    Returns:
+        Hooks system statistics
+    """
+    hooks_mgr = get_hooks_manager()
+    stats = hooks_mgr.get_stats()
+
+    return {
+        "success": True,
+        **stats,
+    }
+
+
+@mcp.tool()
+def clear_hooks(hook_type: str | None = None) -> dict[str, Any]:
+    """Clear registered hooks.
+
+    Args:
+        hook_type: Optional type to clear (None = clear all)
+
+    Returns:
+        Number of hooks cleared
+    """
+    hooks_mgr = get_hooks_manager()
+
+    # Parse hook type if provided
+    parsed_type = None
+    if hook_type is not None:
+        try:
+            parsed_type = HookType(hook_type)
+        except ValueError:
+            return {
+                "success": False,
+                "error": f"Invalid hook type '{hook_type}'",
+                "valid_types": [t.value for t in HookType],
+            }
+
+    count = hooks_mgr.clear(parsed_type)
+
+    return {
+        "success": True,
+        "cleared": count,
+        "hook_type": hook_type,
+        "message": f"Cleared {count} hooks",
+    }
+
+
+@mcp.tool()
+def list_hook_types() -> dict[str, Any]:
+    """List all available hook types with descriptions.
+
+    Returns:
+        Available hook types and when they are triggered
+    """
+    hook_descriptions = {
+        HookType.PRE_TASK: "Before task execution - can modify task or abort",
+        HookType.POST_TASK: "After task completion - can process results",
+        HookType.PRE_SPAWN: "Before spawning an agent",
+        HookType.POST_SPAWN: "After spawning an agent",
+        HookType.ON_AGENT_ERROR: "When an agent encounters an error",
+        HookType.PRE_SESSION: "Before a session starts",
+        HookType.POST_SESSION: "After a session ends",
+        HookType.ON_SESSION_PAUSE: "When a session is paused",
+        HookType.ON_SESSION_RESUME: "When a session is resumed",
+        HookType.PRE_ROUTE: "Before routing decision",
+        HookType.POST_ROUTE: "After routing - can modify agent selection",
+        HookType.PRE_MEMORY_STORE: "Before storing to memory",
+        HookType.POST_MEMORY_QUERY: "After querying memory - can filter results",
+    }
+
+    return {
+        "success": True,
+        "types": [
+            {
+                "type": ht.value,
+                "description": hook_descriptions.get(ht, ""),
+            }
+            for ht in HookType
+        ],
+    }
+
+
+# === Semantic Memory Tools ===
+
+
+@mcp.tool()
+def semantic_store(
+    key: str,
+    value: str,
+    namespace: str = "default",
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Store a memory with semantic embedding for similarity search.
+
+    Stores both the key-value pair and a vector embedding of the value
+    for semantic retrieval. Requires 'uv sync --extra semantic' to install
+    sentence-transformers.
+
+    Args:
+        key: Unique key for the memory
+        value: Value to store (this is what gets embedded)
+        namespace: Optional namespace for organization
+        metadata: Optional metadata dict
+
+    Returns:
+        Confirmation of storage with embedding status
+    """
+    if not semantic_is_available():
+        return {
+            "success": False,
+            "error": "Semantic memory not available",
+            "hint": "Install with: uv sync --extra semantic",
+            "fallback": "Use memory_store for basic key-value storage",
+        }
+
+    memory = get_semantic_memory()
+    if memory is None:
+        return {
+            "success": False,
+            "error": "Failed to initialize semantic memory",
+        }
+
+    memory.store_semantic(key, value, namespace, metadata)
+
+    return {
+        "success": True,
+        "key": key,
+        "namespace": namespace,
+        "has_embedding": True,
+        "embedding_dimension": memory.dimension,
+        "message": f"Stored '{key}' with semantic embedding in namespace '{namespace}'",
+    }
+
+
+@mcp.tool()
+def semantic_search(
+    query: str,
+    namespace: str | None = None,
+    top_k: int = 5,
+    min_similarity: float = 0.0,
+) -> dict[str, Any]:
+    """Search memories by semantic similarity.
+
+    Finds memories whose content is semantically similar to the query,
+    even if they don't share exact keywords.
+
+    Args:
+        query: Search query text (will be embedded)
+        namespace: Optional namespace to search within
+        top_k: Maximum number of results to return
+        min_similarity: Minimum similarity threshold (0-1)
+
+    Returns:
+        List of semantically similar memories with similarity scores
+    """
+    if not semantic_is_available():
+        return {
+            "success": False,
+            "error": "Semantic memory not available",
+            "hint": "Install with: uv sync --extra semantic",
+            "fallback": "Use memory_query for pattern-based search",
+        }
+
+    memory = get_semantic_memory()
+    if memory is None:
+        return {
+            "success": False,
+            "error": "Failed to initialize semantic memory",
+        }
+
+    results = memory.search_semantic(query, namespace, top_k, min_similarity)
+
+    return {
+        "success": True,
+        "query": query,
+        "namespace": namespace,
+        "count": len(results),
+        "results": [
+            {
+                "key": r.key,
+                "value": r.value[:200] + "..." if len(r.value) > 200 else r.value,
+                "namespace": r.namespace,
+                "similarity": round(r.similarity, 4),
+                "metadata": r.metadata,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in results
+        ],
+    }
+
+
+@mcp.tool()
+def semantic_store_batch(
+    items: list[dict[str, Any]],
+    namespace: str = "default",
+) -> dict[str, Any]:
+    """Store multiple memories with embeddings efficiently.
+
+    Uses batch embedding for better performance when storing many items.
+
+    Args:
+        items: List of dicts with 'key', 'value', and optional 'metadata'
+        namespace: Namespace for all items
+
+    Returns:
+        Count of stored items with embedding stats
+    """
+    if not semantic_is_available():
+        return {
+            "success": False,
+            "error": "Semantic memory not available",
+            "hint": "Install with: uv sync --extra semantic",
+        }
+
+    memory = get_semantic_memory()
+    if memory is None:
+        return {
+            "success": False,
+            "error": "Failed to initialize semantic memory",
+        }
+
+    # Validate items
+    if not items:
+        return {
+            "success": False,
+            "error": "No items provided",
+        }
+
+    for i, item in enumerate(items):
+        if "key" not in item or "value" not in item:
+            return {
+                "success": False,
+                "error": f"Item {i} missing required 'key' or 'value' field",
+            }
+
+    count = memory.store_semantic_batch(items, namespace)
+
+    return {
+        "success": True,
+        "stored_count": count,
+        "namespace": namespace,
+        "embedding_dimension": memory.dimension,
+        "message": f"Stored {count} items with semantic embeddings",
+    }
+
+
+@mcp.tool()
+def semantic_stats() -> dict[str, Any]:
+    """Get semantic memory statistics.
+
+    Returns counts of memories with embeddings, embedding model info,
+    and namespace breakdown.
+
+    Returns:
+        Semantic memory statistics
+    """
+    if not semantic_is_available():
+        return {
+            "success": False,
+            "available": False,
+            "error": "Semantic memory not available",
+            "hint": "Install with: uv sync --extra semantic",
+        }
+
+    memory = get_semantic_memory()
+    if memory is None:
+        return {
+            "success": False,
+            "available": True,
+            "error": "Failed to initialize semantic memory",
+        }
+
+    stats = memory.get_stats()
+
+    return {
+        "success": True,
+        "available": True,
+        **stats,
+    }
+
+
+@mcp.tool()
+def semantic_reindex() -> dict[str, Any]:
+    """Regenerate embeddings for all memories.
+
+    Useful after changing the embedding model or to ensure
+    all memories have up-to-date embeddings.
+
+    Returns:
+        Count of reindexed memories
+    """
+    if not semantic_is_available():
+        return {
+            "success": False,
+            "error": "Semantic memory not available",
+            "hint": "Install with: uv sync --extra semantic",
+        }
+
+    memory = get_semantic_memory()
+    if memory is None:
+        return {
+            "success": False,
+            "error": "Failed to initialize semantic memory",
+        }
+
+    count = memory.reindex_all()
+
+    return {
+        "success": True,
+        "reindexed_count": count,
+        "embedding_dimension": memory.dimension,
+        "message": f"Regenerated embeddings for {count} memories",
+    }
+
+
+@mcp.tool()
+def semantic_delete(key: str) -> dict[str, Any]:
+    """Delete a memory and its embedding.
+
+    Removes both the key-value pair and its vector embedding.
+
+    Args:
+        key: Key of the memory to delete
+
+    Returns:
+        Confirmation of deletion
+    """
+    if not semantic_is_available():
+        return {
+            "success": False,
+            "error": "Semantic memory not available",
+            "hint": "Install with: uv sync --extra semantic",
+        }
+
+    memory = get_semantic_memory()
+    if memory is None:
+        return {
+            "success": False,
+            "error": "Failed to initialize semantic memory",
+        }
+
+    deleted = memory.delete_semantic(key)
+
+    return {
+        "success": deleted,
+        "key": key,
+        "message": f"Deleted memory '{key}'" if deleted else f"Memory '{key}' not found",
+    }
+
+
+# === MCP Resources ===
+
+
+@mcp.resource("squad://agents")
+def list_agents_resource() -> str:
+    """List all available agents with their metadata.
+
+    Returns a YAML-formatted list of all agents including their
+    names, descriptions, models, colors, and trigger keywords.
+    """
+    import yaml
+
+    coordinator = get_coordinator()
+    agents = coordinator.registry.list_agents()
+
+    agents_data = []
+    for agent in agents:
+        agents_data.append({
+            "name": agent.name,
+            "description": agent.description.split("\n")[0][:100],  # First line, max 100 chars
+            "model": agent.model.value,
+            "color": agent.color,
+            "triggers": agent.triggers[:10],  # First 10 triggers
+            "file": agent.file_path,
+        })
+
+    return yaml.dump({"agents": agents_data, "total": len(agents_data)}, default_flow_style=False)
+
+
+@mcp.resource("squad://agents/{agent_name}")
+def get_agent_resource(agent_name: str) -> str:
+    """Get the full content of a specific agent file.
+
+    Args:
+        agent_name: Name of the agent (e.g., 'python-developer')
+
+    Returns the complete markdown content of the agent definition.
+    """
+    coordinator = get_coordinator()
+    agent = coordinator.registry.get_agent(agent_name)
+
+    if agent is None:
+        available = [a.name for a in coordinator.registry.list_agents()]
+        return f"Agent '{agent_name}' not found.\n\nAvailable agents:\n" + "\n".join(f"- {a}" for a in available)
+
+    # Read the full agent file
+    from pathlib import Path
+    agent_path = Path(agent.file_path)
+    if agent_path.exists():
+        return agent_path.read_text()
+    return f"Agent file not found: {agent.file_path}"
+
+
+@mcp.resource("squad://skills")
+def list_skills_resource() -> str:
+    """List all available skills.
+
+    Returns a list of all skill directories and their SKILL.md files.
+    """
+    import yaml
+
+    skills_dir = get_skills_dir()
+    skills_data = []
+
+    if skills_dir.exists():
+        for skill_path in skills_dir.iterdir():
+            if skill_path.is_dir():
+                skill_file = skill_path / "SKILL.md"
+                if skill_file.exists():
+                    # Read first few lines for description
+                    content = skill_file.read_text()
+                    lines = content.split("\n")
+                    title = lines[0].lstrip("# ") if lines else skill_path.name
+                    description = ""
+                    for line in lines[1:10]:
+                        line = line.strip()
+                        if line and not line.startswith("#") and not line.startswith("---"):
+                            description = line[:100]
+                            break
+
+                    skills_data.append({
+                        "name": skill_path.name,
+                        "title": title,
+                        "description": description,
+                        "file": str(skill_file),
+                    })
+
+    return yaml.dump({"skills": skills_data, "total": len(skills_data)}, default_flow_style=False)
+
+
+@mcp.resource("squad://skills/{skill_name}")
+def get_skill_resource(skill_name: str) -> str:
+    """Get the full content of a specific skill file.
+
+    Args:
+        skill_name: Name of the skill directory (e.g., 'data-pipeline-patterns')
+
+    Returns the complete markdown content of the SKILL.md file.
+    """
+    skills_dir = get_skills_dir()
+    skill_file = skills_dir / skill_name / "SKILL.md"
+
+    if skill_file.exists():
+        return skill_file.read_text()
+
+    # List available skills for helpful error message
+    available = []
+    if skills_dir.exists():
+        available = [d.name for d in skills_dir.iterdir() if d.is_dir() and (d / "SKILL.md").exists()]
+
+    return f"Skill '{skill_name}' not found.\n\nAvailable skills:\n" + "\n".join(f"- {s}" for s in available)
+
+
+@mcp.resource("squad://commands")
+def list_commands_resource() -> str:
+    """List all available commands organized by category.
+
+    Returns a YAML-formatted list of all commands with their metadata.
+    """
+    import yaml
+
+    commands_dir = get_commands_dir()
+    commands_data = {}
+
+    if commands_dir.exists():
+        for category_path in commands_dir.iterdir():
+            if category_path.is_dir():
+                category = category_path.name
+                commands_data[category] = []
+
+                for cmd_file in category_path.glob("*.md"):
+                    content = cmd_file.read_text()
+
+                    # Parse frontmatter for description
+                    description = ""
+                    if content.startswith("---"):
+                        parts = content.split("---", 2)
+                        if len(parts) >= 3:
+                            import yaml as yaml_parser
+                            try:
+                                fm = yaml_parser.safe_load(parts[1])
+                                description = fm.get("description", "")[:100] if fm else ""
+                            except Exception:
+                                pass
+
+                    commands_data[category].append({
+                        "name": cmd_file.stem,
+                        "description": description,
+                        "file": str(cmd_file),
+                    })
+
+    return yaml.dump({"commands": commands_data, "total_categories": len(commands_data)}, default_flow_style=False)
+
+
+@mcp.resource("squad://commands/{category}/{command_name}")
+def get_command_resource(category: str, command_name: str) -> str:
+    """Get the full content of a specific command file.
+
+    Args:
+        category: Command category (e.g., 'data-engineering')
+        command_name: Name of the command (without .md extension)
+
+    Returns the complete markdown content of the command file.
+    """
+    commands_dir = get_commands_dir()
+    cmd_file = commands_dir / category / f"{command_name}.md"
+
+    if cmd_file.exists():
+        return cmd_file.read_text()
+
+    # Try without .md extension in name
+    if not command_name.endswith(".md"):
+        cmd_file_alt = commands_dir / category / command_name
+        if cmd_file_alt.exists():
+            return cmd_file_alt.read_text()
+
+    # List available for helpful error message
+    available = []
+    if commands_dir.exists():
+        for cat_path in commands_dir.iterdir():
+            if cat_path.is_dir():
+                for f in cat_path.glob("*.md"):
+                    available.append(f"{cat_path.name}/{f.stem}")
+
+    return f"Command '{category}/{command_name}' not found.\n\nAvailable commands:\n" + "\n".join(f"- {c}" for c in available)
+
+
 def main():
     """Run the MCP server."""
     import logging
@@ -1224,7 +2944,7 @@ def main():
     )
 
     # Initialize tracing (handles its own cleanup via signal handlers)
-    from .tracing import init as tracing_init
+    from orchestrator.tracing import init as tracing_init
 
     if tracing_init():
         logging.getLogger(__name__).info("Langfuse tracing initialized successfully")

@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, Callable, Awaitable
 
-from .types import AgentEvent, AgentEventType
+from orchestrator.types import AgentEvent, AgentEventType
 
 logger = logging.getLogger(__name__)
 

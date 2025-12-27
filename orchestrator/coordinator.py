@@ -4,10 +4,10 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from .agent_registry import AgentRegistry
-from .memory import SwarmMemory
-from .tracing import observe, score_task, update_span, update_trace
-from .types import Agent, AgentRun, SwarmStatus, Task, TaskStatus
+from orchestrator.agent_registry import AgentRegistry
+from orchestrator.memory import SwarmMemory
+from orchestrator.tracing import observe, score_task, update_span, update_trace
+from orchestrator.types import Agent, AgentRun, SwarmStatus, Task, TaskStatus
 
 
 class Coordinator:

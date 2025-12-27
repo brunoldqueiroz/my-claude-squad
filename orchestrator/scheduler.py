@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, TypeVar
 
-from .types import Task, TaskStatus
+from orchestrator.types import Task, TaskStatus
 
 logger = logging.getLogger(__name__)
 

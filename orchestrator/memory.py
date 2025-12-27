@@ -6,7 +6,18 @@ from typing import Any
 
 import duckdb
 
-from .types import AgentEvent, AgentEventType, AgentHealth, AgentRun, AgentStatus, Memory, TaskStatus
+from orchestrator.types import (
+    AgentEvent,
+    AgentEventType,
+    AgentHealth,
+    AgentRun,
+    AgentStatus,
+    Memory,
+    Session,
+    SessionStatus,
+    SessionTask,
+    TaskStatus,
+)
 
 
 class SwarmMemory:
@@ -88,6 +99,24 @@ class SwarmMemory:
                 event_type VARCHAR NOT NULL,
                 event_data JSON,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Sessions for persistent, resumable workflows
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                id VARCHAR PRIMARY KEY,
+                name VARCHAR NOT NULL,
+                description VARCHAR,
+                status VARCHAR NOT NULL,
+                swarm_id VARCHAR,
+                tasks JSON,
+                current_task_index INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                paused_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                metadata JSON
             )
         """)
 
@@ -436,6 +465,222 @@ class SwarmMemory:
             )
             for row in results
         ]
+
+    # === Session Operations ===
+
+    def save_session(self, session: Session) -> None:
+        """Save or update a session.
+
+        Args:
+            session: Session object to persist
+        """
+        import json
+
+        tasks_json = json.dumps([t.model_dump() for t in session.tasks], default=str)
+        metadata_json = json.dumps(session.metadata)
+
+        self.conn.execute(
+            """
+            INSERT OR REPLACE INTO sessions (
+                id, name, description, status, swarm_id, tasks,
+                current_task_index, created_at, updated_at, paused_at,
+                completed_at, metadata
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            [
+                session.id,
+                session.name,
+                session.description,
+                session.status.value,
+                session.swarm_id,
+                tasks_json,
+                session.current_task_index,
+                session.created_at,
+                session.updated_at,
+                session.paused_at,
+                session.completed_at,
+                metadata_json,
+            ],
+        )
+
+    def get_session(self, session_id: str) -> Session | None:
+        """Get a session by ID.
+
+        Args:
+            session_id: Session ID to retrieve
+
+        Returns:
+            Session object or None if not found
+        """
+        import json
+
+        result = self.conn.execute(
+            """
+            SELECT id, name, description, status, swarm_id, tasks,
+                   current_task_index, created_at, updated_at, paused_at,
+                   completed_at, metadata
+            FROM sessions
+            WHERE id = ?
+        """,
+            [session_id],
+        ).fetchone()
+
+        if result is None:
+            return None
+
+        tasks_data = json.loads(result[5]) if result[5] else []
+        tasks = [SessionTask(**t) for t in tasks_data]
+        metadata = json.loads(result[11]) if result[11] else {}
+
+        return Session(
+            id=result[0],
+            name=result[1],
+            description=result[2],
+            status=SessionStatus(result[3]),
+            swarm_id=result[4],
+            tasks=tasks,
+            current_task_index=result[6],
+            created_at=result[7],
+            updated_at=result[8],
+            paused_at=result[9],
+            completed_at=result[10],
+            metadata=metadata,
+        )
+
+    def list_sessions(
+        self,
+        status: SessionStatus | None = None,
+        limit: int = 50,
+    ) -> list[Session]:
+        """List sessions with optional status filter.
+
+        Args:
+            status: Optional status to filter by
+            limit: Maximum results to return
+
+        Returns:
+            List of Session objects
+        """
+        import json
+
+        sql = """
+            SELECT id, name, description, status, swarm_id, tasks,
+                   current_task_index, created_at, updated_at, paused_at,
+                   completed_at, metadata
+            FROM sessions
+        """
+        params: list[Any] = []
+
+        if status is not None:
+            sql += " WHERE status = ?"
+            params.append(status.value)
+
+        sql += f" ORDER BY updated_at DESC LIMIT {limit}"
+
+        results = self.conn.execute(sql, params).fetchall()
+
+        sessions = []
+        for row in results:
+            tasks_data = json.loads(row[5]) if row[5] else []
+            tasks = [SessionTask(**t) for t in tasks_data]
+            metadata = json.loads(row[11]) if row[11] else {}
+
+            sessions.append(
+                Session(
+                    id=row[0],
+                    name=row[1],
+                    description=row[2],
+                    status=SessionStatus(row[3]),
+                    swarm_id=row[4],
+                    tasks=tasks,
+                    current_task_index=row[6],
+                    created_at=row[7],
+                    updated_at=row[8],
+                    paused_at=row[9],
+                    completed_at=row[10],
+                    metadata=metadata,
+                )
+            )
+
+        return sessions
+
+    def delete_session(self, session_id: str) -> bool:
+        """Delete a session by ID.
+
+        Args:
+            session_id: Session ID to delete
+
+        Returns:
+            True if deleted, False if not found
+        """
+        result = self.conn.execute(
+            "DELETE FROM sessions WHERE id = ? RETURNING id",
+            [session_id],
+        ).fetchone()
+        return result is not None
+
+    def get_active_sessions(self) -> list[Session]:
+        """Get all active or paused sessions (resumable).
+
+        Returns:
+            List of active/paused Session objects
+        """
+        import json
+
+        results = self.conn.execute(
+            """
+            SELECT id, name, description, status, swarm_id, tasks,
+                   current_task_index, created_at, updated_at, paused_at,
+                   completed_at, metadata
+            FROM sessions
+            WHERE status IN ('active', 'paused')
+            ORDER BY updated_at DESC
+        """
+        ).fetchall()
+
+        sessions = []
+        for row in results:
+            tasks_data = json.loads(row[5]) if row[5] else []
+            tasks = [SessionTask(**t) for t in tasks_data]
+            metadata = json.loads(row[11]) if row[11] else {}
+
+            sessions.append(
+                Session(
+                    id=row[0],
+                    name=row[1],
+                    description=row[2],
+                    status=SessionStatus(row[3]),
+                    swarm_id=row[4],
+                    tasks=tasks,
+                    current_task_index=row[6],
+                    created_at=row[7],
+                    updated_at=row[8],
+                    paused_at=row[9],
+                    completed_at=row[10],
+                    metadata=metadata,
+                )
+            )
+
+        return sessions
+
+    def cleanup_old_sessions(self, days: int = 30) -> int:
+        """Delete completed/failed/cancelled sessions older than specified days.
+
+        Args:
+            days: Delete sessions older than this many days
+
+        Returns:
+            Number of rows deleted
+        """
+        result = self.conn.execute(
+            f"""
+            DELETE FROM sessions
+            WHERE status IN ('completed', 'failed', 'cancelled')
+            AND updated_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+            RETURNING id
+            """
+        ).fetchall()
+        return len(result)
 
     # === Retention and Cleanup Operations ===
 
