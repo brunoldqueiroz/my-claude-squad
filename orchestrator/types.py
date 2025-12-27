@@ -180,6 +180,145 @@ class ExecutionMode(str, Enum):
     SEQUENTIAL = "sequential"  # Must wait for previous tasks
 
 
+class TopologyType(str, Enum):
+    """Swarm coordination topology patterns."""
+
+    HIERARCHICAL = "hierarchical"  # Queen-Worker: coordinator delegates to workers
+    MESH = "mesh"  # Peer-to-peer: all agents can collaborate directly
+    RING = "ring"  # Pipeline: sequential processing A -> B -> C
+    STAR = "star"  # Hub-spoke: central coordinator with specialized workers
+
+
+class SwarmRole(str, Enum):
+    """Role of an agent within a swarm topology."""
+
+    COORDINATOR = "coordinator"  # Queen/Hub - manages other agents
+    WORKER = "worker"  # Performs delegated tasks
+    PEER = "peer"  # Equal participant in mesh topology
+
+
+class SwarmMember(BaseModel):
+    """An agent's membership in a swarm."""
+
+    agent_name: str
+    role: SwarmRole
+    position: int = 0  # Position in ring topology (0-indexed)
+    can_delegate_to: list[str] = Field(default_factory=list)  # Agents this member can delegate to
+    reports_to: str | None = None  # Agent this member reports results to
+
+
+class Swarm(BaseModel):
+    """A coordinated group of agents working together.
+
+    Swarms define how agents collaborate:
+    - Hierarchical: Queen coordinates workers
+    - Mesh: Peers collaborate freely
+    - Ring: Sequential pipeline
+    - Star: Hub delegates to spokes
+    """
+
+    id: str
+    name: str
+    topology: TopologyType
+    members: list[SwarmMember] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=datetime.now)
+    active: bool = True
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    def get_coordinator(self) -> SwarmMember | None:
+        """Get the coordinator/queen/hub agent if any."""
+        for member in self.members:
+            if member.role == SwarmRole.COORDINATOR:
+                return member
+        return None
+
+    def get_workers(self) -> list[SwarmMember]:
+        """Get all worker agents."""
+        return [m for m in self.members if m.role == SwarmRole.WORKER]
+
+    def get_peers(self) -> list[SwarmMember]:
+        """Get all peer agents (mesh topology)."""
+        return [m for m in self.members if m.role == SwarmRole.PEER]
+
+    def get_ring_order(self) -> list[SwarmMember]:
+        """Get members in ring order by position."""
+        return sorted(self.members, key=lambda m: m.position)
+
+
+class SessionStatus(str, Enum):
+    """Status of a session."""
+
+    ACTIVE = "active"  # Session is currently running
+    PAUSED = "paused"  # Session is paused, can be resumed
+    COMPLETED = "completed"  # Session finished successfully
+    FAILED = "failed"  # Session failed with errors
+    CANCELLED = "cancelled"  # Session was cancelled by user
+
+
+class SessionTask(BaseModel):
+    """A task within a session with tracking info."""
+
+    task_id: str
+    description: str
+    agent_name: str | None = None
+    status: TaskStatus = TaskStatus.PENDING
+    order: int = 0  # Execution order within session
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    result: str | None = None
+    error: str | None = None
+
+
+class Session(BaseModel):
+    """A persistent, resumable work session.
+
+    Sessions track multi-task workflows that can be:
+    - Paused and resumed later
+    - Persisted across restarts
+    - Associated with swarms for topology-aware execution
+    """
+
+    id: str
+    name: str
+    description: str | None = None
+    status: SessionStatus = SessionStatus.ACTIVE
+    swarm_id: str | None = None  # Optional associated swarm
+    tasks: list[SessionTask] = Field(default_factory=list)
+    current_task_index: int = 0  # Index of currently executing task
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    paused_at: datetime | None = None
+    completed_at: datetime | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def progress(self) -> float:
+        """Calculate session progress as percentage (0.0 to 1.0)."""
+        if not self.tasks:
+            return 0.0
+        completed = sum(1 for t in self.tasks if t.status == TaskStatus.COMPLETED)
+        return completed / len(self.tasks)
+
+    @property
+    def current_task(self) -> SessionTask | None:
+        """Get the current task being executed."""
+        if 0 <= self.current_task_index < len(self.tasks):
+            return self.tasks[self.current_task_index]
+        return None
+
+    def get_pending_tasks(self) -> list[SessionTask]:
+        """Get all pending tasks."""
+        return [t for t in self.tasks if t.status == TaskStatus.PENDING]
+
+    def get_completed_tasks(self) -> list[SessionTask]:
+        """Get all completed tasks."""
+        return [t for t in self.tasks if t.status == TaskStatus.COMPLETED]
+
+    def get_failed_tasks(self) -> list[SessionTask]:
+        """Get all failed tasks."""
+        return [t for t in self.tasks if t.status == TaskStatus.FAILED]
+
+
 class Subtask(BaseModel):
     """A decomposed subtask from Claude Code's analysis."""
 
