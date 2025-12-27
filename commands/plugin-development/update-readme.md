@@ -57,13 +57,13 @@ This command uses the **plugin-developer** agent.
 ```markdown
 ## Overview
 
-This plugin provides 17 specialized AI agents...
+This plugin provides 15 specialized AI agents...
 
 ## Agents
 
 | Agent | Specialty |
 |-------|-----------|
-| planner-orchestrator | Task decomposition |
+| python-developer | Python for data engineering |
 [... old list ...]
 ```
 
@@ -72,15 +72,14 @@ This plugin provides 17 specialized AI agents...
 ```markdown
 ## Overview
 
-This plugin provides 19 specialized AI agents...
+This plugin provides 17 specialized AI agents...
 
 ## Agents
 
 | Agent | Specialty |
 |-------|-----------|
-| planner-orchestrator | Task decomposition |
+| squad-orchestrator | Master orchestrator for all domains |
 [... complete updated list ...]
-| plugin-architect | Plugin extension design |
 | plugin-developer | Component creation |
 ```
 
@@ -96,16 +95,15 @@ The command will:
 ## README Update Preview
 
 ### Changes
-- Agent count: 17 → 19
-- Added agents: plugin-architect, plugin-developer
-- Added commands: /new-agent, /new-skill, /new-command, /list-agents,
-  /list-commands, /validate-plugin, /update-readme, /plugin-status
-- Added skill: plugin-development-patterns
+- Agent count: 15 → 17
+- Added agents: squad-orchestrator, plugin-developer
+- Added commands: /audit-plugin, /improve-routing, /improve-agent, /add-tests
+- Added skill: self-improvement-patterns
 
 ### Sections Updated
 - Overview
-- Plugin Development Agents table
-- Plugin Development Commands section
+- Orchestrator section
+- Self-Improvement Commands section
 
 Proceed with update? [Y/n]
 ```

@@ -32,11 +32,11 @@ This command uses the **plugin-developer** agent.
 
 | Model | Count | Agents |
 |-------|-------|--------|
-| opus | 3 | planner-orchestrator, ai-orchestrator, plugin-architect |
+| opus | 1 | squad-orchestrator |
 | sonnet | 15 | python-developer, sql-specialist, ... |
 | haiku | 1 | git-commit-writer |
 
-**Total**: 19 agents
+**Total**: 17 agents
 
 ## Commands
 
@@ -75,17 +75,18 @@ This command uses the **plugin-developer** agent.
 | plugin.json | ✅ Valid |
 | README.md | ✅ Up to date |
 | CLAUDE.md | ✅ Present |
-| All agents valid | ✅ 19/19 |
-| All commands valid | ✅ 26/26 |
-| All skills valid | ✅ 9/9 |
+| All agents valid | ✅ 17/17 |
+| All commands valid | ✅ 30/30 |
+| All skills valid | ✅ 10/10 |
 
 ## Domains
 
 | Domain | Orchestrator | Specialists | Commands | Skills |
 |--------|--------------|-------------|----------|--------|
-| Data Engineering | planner-orchestrator | 10 | 9 | 6 |
-| AI Engineering | ai-orchestrator | 4 | 5 | 1 |
-| Plugin Development | plugin-architect | 1 | 8 | 1 |
+| Data Engineering | squad-orchestrator | 11 | 9 | 6 |
+| AI Engineering | squad-orchestrator | 4 | 5 | 1 |
+| Plugin Development | squad-orchestrator | 1 | 12 | 2 |
+| Self-Improvement | squad-orchestrator | - | 4 | 1 |
 ```
 
 ## Example Output
@@ -96,17 +97,17 @@ This command uses the **plugin-developer** agent.
 ## Overview
 - **Name**: my-claude-squad
 - **Version**: 1.0.0
-- **Total Components**: 54
+- **Total Components**: 57
 
 ## Agents
 
 | Model | Count | Agents |
 |-------|-------|--------|
-| opus | 3 | planner-orchestrator, ai-orchestrator, plugin-architect |
+| opus | 1 | squad-orchestrator |
 | sonnet | 15 | python-developer, sql-specialist, snowflake-specialist, spark-specialist, airflow-specialist, aws-specialist, sql-server-specialist, container-specialist, kubernetes-specialist, documenter, rag-specialist, agent-framework-specialist, llm-specialist, automation-specialist, plugin-developer |
 | haiku | 1 | git-commit-writer |
 
-**Total**: 19 agents
+**Total**: 17 agents
 
 ## Commands
 
@@ -118,13 +119,13 @@ This command uses the **plugin-developer** agent.
 | documentation | 3 |
 | research | 1 |
 | ai-engineering | 5 |
-| plugin-development | 8 |
+| plugin-development | 12 |
 
-**Total**: 26 commands
+**Total**: 30 commands
 
 ## Skills
 
-**Total**: 9 skills
+**Total**: 10 skills
 
 ## Health
 
@@ -133,9 +134,9 @@ This command uses the **plugin-developer** agent.
 | plugin.json | ✅ Valid |
 | README.md | ✅ Up to date |
 | CLAUDE.md | ✅ Present |
-| All agents valid | ✅ 19/19 |
-| All commands valid | ✅ 26/26 |
-| All skills valid | ✅ 9/9 |
+| All agents valid | ✅ 17/17 |
+| All commands valid | ✅ 30/30 |
+| All skills valid | ✅ 10/10 |
 
 **Overall Status**: ✅ Healthy
 ```
