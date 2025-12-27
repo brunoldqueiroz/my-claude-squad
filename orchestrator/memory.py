@@ -1,11 +1,14 @@
-"""DuckDB-based persistent memory for the orchestrator."""
+"""DuckDB-based persistent memory for the orchestrator.
+
+Uses short-lived connections with retry logic to avoid lock conflicts
+when multiple processes access the same database file.
+"""
 
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import duckdb
-
+from orchestrator.connection import ConnectionManager
 from orchestrator.types import (
     AgentEvent,
     AgentEventType,
@@ -21,7 +24,12 @@ from orchestrator.types import (
 
 
 class SwarmMemory:
-    """DuckDB-backed persistent memory for swarm state."""
+    """DuckDB-backed persistent memory for swarm state.
+
+    Uses short-lived connections to avoid lock conflicts. Each operation
+    opens a connection, performs the query, and closes it immediately.
+    Retry logic handles transient lock errors.
+    """
 
     def __init__(self, db_path: Path | None = None):
         """Initialize the memory store.
@@ -35,90 +43,91 @@ class SwarmMemory:
             db_path = swarm_dir / "memory.duckdb"
 
         self.db_path = db_path
-        self.conn = duckdb.connect(str(db_path))
+        self._manager = ConnectionManager(db_path)
         self._init_tables()
 
     def _init_tables(self) -> None:
         """Initialize database tables."""
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS memories (
-                key VARCHAR PRIMARY KEY,
-                value VARCHAR,
-                namespace VARCHAR DEFAULT 'default',
-                metadata JSON,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        with self._manager.connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS memories (
+                    key VARCHAR PRIMARY KEY,
+                    value VARCHAR,
+                    namespace VARCHAR DEFAULT 'default',
+                    metadata JSON,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS agent_runs (
-                id VARCHAR PRIMARY KEY,
-                agent_name VARCHAR NOT NULL,
-                task VARCHAR NOT NULL,
-                status VARCHAR NOT NULL,
-                started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
-                tokens_used INTEGER DEFAULT 0,
-                result VARCHAR
-            )
-        """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS agent_runs (
+                    id VARCHAR PRIMARY KEY,
+                    agent_name VARCHAR NOT NULL,
+                    task VARCHAR NOT NULL,
+                    status VARCHAR NOT NULL,
+                    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    tokens_used INTEGER DEFAULT 0,
+                    result VARCHAR
+                )
+            """)
 
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS task_log (
-                id VARCHAR PRIMARY KEY,
-                description VARCHAR NOT NULL,
-                agent_name VARCHAR,
-                status VARCHAR NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
-                result VARCHAR
-            )
-        """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS task_log (
+                    id VARCHAR PRIMARY KEY,
+                    description VARCHAR NOT NULL,
+                    agent_name VARCHAR,
+                    status VARCHAR NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    result VARCHAR
+                )
+            """)
 
-        # Agent health tracking table
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS agent_health (
-                agent_name VARCHAR PRIMARY KEY,
-                status VARCHAR NOT NULL,
-                health_score REAL DEFAULT 1.0,
-                last_heartbeat TIMESTAMP,
-                current_task_id VARCHAR,
-                error_count INTEGER DEFAULT 0,
-                success_count INTEGER DEFAULT 0,
-                total_execution_time_ms REAL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+            # Agent health tracking table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS agent_health (
+                    agent_name VARCHAR PRIMARY KEY,
+                    status VARCHAR NOT NULL,
+                    health_score REAL DEFAULT 1.0,
+                    last_heartbeat TIMESTAMP,
+                    current_task_id VARCHAR,
+                    error_count INTEGER DEFAULT 0,
+                    success_count INTEGER DEFAULT 0,
+                    total_execution_time_ms REAL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
-        # Agent events for debugging and observability
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS agent_events (
-                id VARCHAR PRIMARY KEY,
-                agent_name VARCHAR NOT NULL,
-                event_type VARCHAR NOT NULL,
-                event_data JSON,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+            # Agent events for debugging and observability
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS agent_events (
+                    id VARCHAR PRIMARY KEY,
+                    agent_name VARCHAR NOT NULL,
+                    event_type VARCHAR NOT NULL,
+                    event_data JSON,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
-        # Sessions for persistent, resumable workflows
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS sessions (
-                id VARCHAR PRIMARY KEY,
-                name VARCHAR NOT NULL,
-                description VARCHAR,
-                status VARCHAR NOT NULL,
-                swarm_id VARCHAR,
-                tasks JSON,
-                current_task_index INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                paused_at TIMESTAMP,
-                completed_at TIMESTAMP,
-                metadata JSON
-            )
-        """)
+            # Sessions for persistent, resumable workflows
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id VARCHAR PRIMARY KEY,
+                    name VARCHAR NOT NULL,
+                    description VARCHAR,
+                    status VARCHAR NOT NULL,
+                    swarm_id VARCHAR,
+                    tasks JSON,
+                    current_task_index INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    paused_at TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    metadata JSON
+                )
+            """)
 
         # Create indexes for frequently queried columns
         self._create_indexes()
@@ -155,14 +164,15 @@ class SwarmMemory:
             ("idx_sessions_swarm_id", "sessions", "swarm_id"),
         ]
 
-        for index_name, table, column in indexes:
-            try:
-                self.conn.execute(
-                    f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})"
-                )
-            except Exception:
-                # Index might already exist with different definition
-                pass
+        with self._manager.connection() as conn:
+            for index_name, table, column in indexes:
+                try:
+                    conn.execute(
+                        f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})"
+                    )
+                except Exception:
+                    # Index might already exist with different definition
+                    pass
 
     # === Memory Operations ===
 
@@ -179,13 +189,14 @@ class SwarmMemory:
 
         metadata_json = json.dumps(metadata or {})
 
-        self.conn.execute(
-            """
-            INSERT OR REPLACE INTO memories (key, value, namespace, metadata, created_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """,
-            [key, value, namespace, metadata_json],
-        )
+        with self._manager.connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO memories (key, value, namespace, metadata, created_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+                [key, value, namespace, metadata_json],
+            )
 
     def get(self, key: str) -> str | None:
         """Get a value by key.
@@ -196,7 +207,9 @@ class SwarmMemory:
         Returns:
             Value if found, None otherwise
         """
-        result = self.conn.execute("SELECT value FROM memories WHERE key = ?", [key]).fetchone()
+        result = self._manager.execute_one(
+            "SELECT value FROM memories WHERE key = ?", [key], read_only=True
+        )
         return result[0] if result else None
 
     def query(self, pattern: str, namespace: str | None = None, limit: int = 10) -> list[Memory]:
@@ -217,7 +230,7 @@ class SwarmMemory:
             FROM memories
             WHERE (key LIKE ? OR value LIKE ?)
         """
-        params = [f"%{pattern}%", f"%{pattern}%"]
+        params: list[Any] = [f"%{pattern}%", f"%{pattern}%"]
 
         if namespace:
             sql += " AND namespace = ?"
@@ -225,7 +238,7 @@ class SwarmMemory:
 
         sql += f" ORDER BY created_at DESC LIMIT {limit}"
 
-        results = self.conn.execute(sql, params).fetchall()
+        results = self._manager.execute(sql, params, read_only=True)
 
         return [
             Memory(
@@ -247,8 +260,11 @@ class SwarmMemory:
         Returns:
             True if deleted, False if not found
         """
-        result = self.conn.execute("DELETE FROM memories WHERE key = ? RETURNING key", [key]).fetchone()
-        return result is not None
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                "DELETE FROM memories WHERE key = ? RETURNING key", [key]
+            ).fetchone()
+            return result is not None
 
     # === Agent Run Operations ===
 
@@ -260,13 +276,14 @@ class SwarmMemory:
             agent_name: Name of the agent
             task: Task description
         """
-        self.conn.execute(
-            """
-            INSERT INTO agent_runs (id, agent_name, task, status, started_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """,
-            [run_id, agent_name, task, TaskStatus.IN_PROGRESS.value],
-        )
+        with self._manager.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO agent_runs (id, agent_name, task, status, started_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+                [run_id, agent_name, task, TaskStatus.IN_PROGRESS.value],
+            )
 
     def log_run_complete(self, run_id: str, status: TaskStatus, result: str | None = None, tokens: int = 0) -> None:
         """Log the completion of an agent run.
@@ -277,14 +294,15 @@ class SwarmMemory:
             result: Optional result text
             tokens: Tokens used
         """
-        self.conn.execute(
-            """
-            UPDATE agent_runs
-            SET status = ?, completed_at = CURRENT_TIMESTAMP, result = ?, tokens_used = ?
-            WHERE id = ?
-        """,
-            [status.value, result, tokens, run_id],
-        )
+        with self._manager.connection() as conn:
+            conn.execute(
+                """
+                UPDATE agent_runs
+                SET status = ?, completed_at = CURRENT_TIMESTAMP, result = ?, tokens_used = ?
+                WHERE id = ?
+            """,
+                [status.value, result, tokens, run_id],
+            )
 
     def get_recent_runs(self, limit: int = 10) -> list[AgentRun]:
         """Get recent agent runs.
@@ -295,14 +313,15 @@ class SwarmMemory:
         Returns:
             List of recent AgentRun objects
         """
-        results = self.conn.execute(
+        results = self._manager.execute(
             f"""
             SELECT id, agent_name, task, status, started_at, completed_at, tokens_used, result
             FROM agent_runs
             ORDER BY started_at DESC
             LIMIT {limit}
-        """
-        ).fetchall()
+        """,
+            read_only=True,
+        )
 
         return [
             AgentRun(
@@ -324,7 +343,8 @@ class SwarmMemory:
         Returns:
             Dict with run statistics
         """
-        result = self.conn.execute("""
+        result = self._manager.execute_one(
+            """
             SELECT
                 COUNT(*) as total_runs,
                 COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
@@ -332,19 +352,25 @@ class SwarmMemory:
                 COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
                 SUM(tokens_used) as total_tokens
             FROM agent_runs
-        """).fetchone()
+        """,
+            read_only=True,
+        )
 
         return {
-            "total_runs": result[0],
-            "completed": result[1],
-            "failed": result[2],
-            "in_progress": result[3],
-            "total_tokens": result[4] or 0,
+            "total_runs": result[0] if result else 0,
+            "completed": result[1] if result else 0,
+            "failed": result[2] if result else 0,
+            "in_progress": result[3] if result else 0,
+            "total_tokens": (result[4] or 0) if result else 0,
         }
 
     def close(self) -> None:
-        """Close the database connection."""
-        self.conn.close()
+        """Close the database connection.
+
+        Note: With short-lived connections, this is now a no-op.
+        Kept for backwards compatibility.
+        """
+        pass  # Connections are now short-lived, no persistent connection to close
 
     # === Agent Health Operations ===
 
@@ -354,27 +380,28 @@ class SwarmMemory:
         Args:
             health: AgentHealth object to persist
         """
-        self.conn.execute(
-            """
-            INSERT OR REPLACE INTO agent_health (
-                agent_name, status, health_score, last_heartbeat,
-                current_task_id, error_count, success_count,
-                total_execution_time_ms, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-            [
-                health.agent_name,
-                health.status.value,
-                health.health_score,
-                health.last_heartbeat,
-                health.current_task_id,
-                health.error_count,
-                health.success_count,
-                health.total_execution_time_ms,
-                health.created_at,
-                health.updated_at,
-            ],
-        )
+        with self._manager.connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO agent_health (
+                    agent_name, status, health_score, last_heartbeat,
+                    current_task_id, error_count, success_count,
+                    total_execution_time_ms, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+                [
+                    health.agent_name,
+                    health.status.value,
+                    health.health_score,
+                    health.last_heartbeat,
+                    health.current_task_id,
+                    health.error_count,
+                    health.success_count,
+                    health.total_execution_time_ms,
+                    health.created_at,
+                    health.updated_at,
+                ],
+            )
 
     def get_agent_health(self, agent_name: str) -> AgentHealth | None:
         """Get health record for a specific agent.
@@ -385,7 +412,7 @@ class SwarmMemory:
         Returns:
             AgentHealth object or None if not found
         """
-        result = self.conn.execute(
+        result = self._manager.execute_one(
             """
             SELECT agent_name, status, health_score, last_heartbeat,
                    current_task_id, error_count, success_count,
@@ -394,7 +421,8 @@ class SwarmMemory:
             WHERE agent_name = ?
         """,
             [agent_name],
-        ).fetchone()
+            read_only=True,
+        )
 
         if result is None:
             return None
@@ -418,15 +446,16 @@ class SwarmMemory:
         Returns:
             List of AgentHealth objects
         """
-        results = self.conn.execute(
+        results = self._manager.execute(
             """
             SELECT agent_name, status, health_score, last_heartbeat,
                    current_task_id, error_count, success_count,
                    total_execution_time_ms, created_at, updated_at
             FROM agent_health
             ORDER BY agent_name
-        """
-        ).fetchall()
+        """,
+            read_only=True,
+        )
 
         return [
             AgentHealth(
@@ -452,19 +481,20 @@ class SwarmMemory:
         """
         import json
 
-        self.conn.execute(
-            """
-            INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        """,
-            [
-                event.id,
-                event.agent_name,
-                event.event_type.value,
-                json.dumps(event.event_data),
-                event.timestamp,
-            ],
-        )
+        with self._manager.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """,
+                [
+                    event.id,
+                    event.agent_name,
+                    event.event_type.value,
+                    json.dumps(event.event_data),
+                    event.timestamp,
+                ],
+            )
 
     def get_agent_events(
         self,
@@ -497,7 +527,7 @@ class SwarmMemory:
 
         sql += f" ORDER BY timestamp DESC LIMIT {limit}"
 
-        results = self.conn.execute(sql, params).fetchall()
+        results = self._manager.execute(sql, params, read_only=True)
 
         return [
             AgentEvent(
@@ -525,41 +555,42 @@ class SwarmMemory:
 
         # Use INSERT ON CONFLICT instead of INSERT OR REPLACE to avoid
         # DuckDB bug where indexes on updated columns prevent updates
-        self.conn.execute(
-            """
-            INSERT INTO sessions (
-                id, name, description, status, swarm_id, tasks,
-                current_task_index, created_at, updated_at, paused_at,
-                completed_at, metadata
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (id) DO UPDATE SET
-                name = EXCLUDED.name,
-                description = EXCLUDED.description,
-                status = EXCLUDED.status,
-                swarm_id = EXCLUDED.swarm_id,
-                tasks = EXCLUDED.tasks,
-                current_task_index = EXCLUDED.current_task_index,
-                created_at = EXCLUDED.created_at,
-                updated_at = EXCLUDED.updated_at,
-                paused_at = EXCLUDED.paused_at,
-                completed_at = EXCLUDED.completed_at,
-                metadata = EXCLUDED.metadata
-        """,
-            [
-                session.id,
-                session.name,
-                session.description,
-                session.status.value,
-                session.swarm_id,
-                tasks_json,
-                session.current_task_index,
-                session.created_at,
-                session.updated_at,
-                session.paused_at,
-                session.completed_at,
-                metadata_json,
-            ],
-        )
+        with self._manager.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO sessions (
+                    id, name, description, status, swarm_id, tasks,
+                    current_task_index, created_at, updated_at, paused_at,
+                    completed_at, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    status = EXCLUDED.status,
+                    swarm_id = EXCLUDED.swarm_id,
+                    tasks = EXCLUDED.tasks,
+                    current_task_index = EXCLUDED.current_task_index,
+                    created_at = EXCLUDED.created_at,
+                    updated_at = EXCLUDED.updated_at,
+                    paused_at = EXCLUDED.paused_at,
+                    completed_at = EXCLUDED.completed_at,
+                    metadata = EXCLUDED.metadata
+            """,
+                [
+                    session.id,
+                    session.name,
+                    session.description,
+                    session.status.value,
+                    session.swarm_id,
+                    tasks_json,
+                    session.current_task_index,
+                    session.created_at,
+                    session.updated_at,
+                    session.paused_at,
+                    session.completed_at,
+                    metadata_json,
+                ],
+            )
 
     def get_session(self, session_id: str) -> Session | None:
         """Get a session by ID.
@@ -572,7 +603,7 @@ class SwarmMemory:
         """
         import json
 
-        result = self.conn.execute(
+        result = self._manager.execute_one(
             """
             SELECT id, name, description, status, swarm_id, tasks,
                    current_task_index, created_at, updated_at, paused_at,
@@ -581,7 +612,8 @@ class SwarmMemory:
             WHERE id = ?
         """,
             [session_id],
-        ).fetchone()
+            read_only=True,
+        )
 
         if result is None:
             return None
@@ -635,7 +667,7 @@ class SwarmMemory:
 
         sql += f" ORDER BY updated_at DESC LIMIT {limit}"
 
-        results = self.conn.execute(sql, params).fetchall()
+        results = self._manager.execute(sql, params, read_only=True)
 
         sessions = []
         for row in results:
@@ -671,11 +703,12 @@ class SwarmMemory:
         Returns:
             True if deleted, False if not found
         """
-        result = self.conn.execute(
-            "DELETE FROM sessions WHERE id = ? RETURNING id",
-            [session_id],
-        ).fetchone()
-        return result is not None
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                "DELETE FROM sessions WHERE id = ? RETURNING id",
+                [session_id],
+            ).fetchone()
+            return result is not None
 
     def get_active_sessions(self) -> list[Session]:
         """Get all active or paused sessions (resumable).
@@ -685,7 +718,7 @@ class SwarmMemory:
         """
         import json
 
-        results = self.conn.execute(
+        results = self._manager.execute(
             """
             SELECT id, name, description, status, swarm_id, tasks,
                    current_task_index, created_at, updated_at, paused_at,
@@ -693,8 +726,9 @@ class SwarmMemory:
             FROM sessions
             WHERE status IN ('active', 'paused')
             ORDER BY updated_at DESC
-        """
-        ).fetchall()
+        """,
+            read_only=True,
+        )
 
         sessions = []
         for row in results:
@@ -730,15 +764,16 @@ class SwarmMemory:
         Returns:
             Number of rows deleted
         """
-        result = self.conn.execute(
-            f"""
-            DELETE FROM sessions
-            WHERE status IN ('completed', 'failed', 'cancelled')
-            AND updated_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
-            RETURNING id
-            """
-        ).fetchall()
-        return len(result)
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                f"""
+                DELETE FROM sessions
+                WHERE status IN ('completed', 'failed', 'cancelled')
+                AND updated_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+                RETURNING id
+                """
+            ).fetchall()
+            return len(result)
 
     # === Retention and Cleanup Operations ===
 
@@ -750,21 +785,22 @@ class SwarmMemory:
         """
         stats = {}
 
-        # Get row counts for each table
-        tables = ["memories", "agent_runs", "task_log", "agent_health", "agent_events"]
-        for table in tables:
-            result = self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
-            stats[f"{table}_count"] = result[0] if result else 0
+        with self._manager.connection(read_only=True) as conn:
+            # Get row counts for each table
+            tables = ["memories", "agent_runs", "task_log", "agent_health", "agent_events"]
+            for table in tables:
+                result = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+                stats[f"{table}_count"] = result[0] if result else 0
 
-        # Get oldest and newest timestamps for time-series tables
-        for table in ["agent_runs", "agent_events"]:
-            time_col = "started_at" if table == "agent_runs" else "timestamp"
-            result = self.conn.execute(
-                f"SELECT MIN({time_col}), MAX({time_col}) FROM {table}"
-            ).fetchone()
-            if result and result[0]:
-                stats[f"{table}_oldest"] = result[0].isoformat() if hasattr(result[0], "isoformat") else str(result[0])
-                stats[f"{table}_newest"] = result[1].isoformat() if hasattr(result[1], "isoformat") else str(result[1])
+            # Get oldest and newest timestamps for time-series tables
+            for table in ["agent_runs", "agent_events"]:
+                time_col = "started_at" if table == "agent_runs" else "timestamp"
+                result = conn.execute(
+                    f"SELECT MIN({time_col}), MAX({time_col}) FROM {table}"
+                ).fetchone()
+                if result and result[0]:
+                    stats[f"{table}_oldest"] = result[0].isoformat() if hasattr(result[0], "isoformat") else str(result[0])
+                    stats[f"{table}_newest"] = result[1].isoformat() if hasattr(result[1], "isoformat") else str(result[1])
 
         # Get database file size
         if self.db_path.exists():
@@ -784,14 +820,15 @@ class SwarmMemory:
         """
         # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
         # This is safe since days is validated as int
-        result = self.conn.execute(
-            f"""
-            DELETE FROM agent_runs
-            WHERE started_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
-            RETURNING id
-            """
-        ).fetchall()
-        return len(result)
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                f"""
+                DELETE FROM agent_runs
+                WHERE started_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+                RETURNING id
+                """
+            ).fetchall()
+            return len(result)
 
     def cleanup_old_events(self, days: int = 7) -> int:
         """Delete agent events older than specified days.
@@ -803,14 +840,15 @@ class SwarmMemory:
             Number of rows deleted
         """
         # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
-        result = self.conn.execute(
-            f"""
-            DELETE FROM agent_events
-            WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
-            RETURNING id
-            """
-        ).fetchall()
-        return len(result)
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                f"""
+                DELETE FROM agent_events
+                WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+                RETURNING id
+                """
+            ).fetchall()
+            return len(result)
 
     def cleanup_old_tasks(self, days: int = 30) -> int:
         """Delete task log entries older than specified days.
@@ -822,14 +860,15 @@ class SwarmMemory:
             Number of rows deleted
         """
         # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
-        result = self.conn.execute(
-            f"""
-            DELETE FROM task_log
-            WHERE created_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
-            RETURNING id
-            """
-        ).fetchall()
-        return len(result)
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                f"""
+                DELETE FROM task_log
+                WHERE created_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+                RETURNING id
+                """
+            ).fetchall()
+            return len(result)
 
     def cleanup_memories_by_namespace(self, namespace: str) -> int:
         """Delete all memories in a specific namespace.
@@ -840,11 +879,12 @@ class SwarmMemory:
         Returns:
             Number of rows deleted
         """
-        result = self.conn.execute(
-            "DELETE FROM memories WHERE namespace = ? RETURNING key",
-            [namespace],
-        ).fetchall()
-        return len(result)
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                "DELETE FROM memories WHERE namespace = ? RETURNING key",
+                [namespace],
+            ).fetchall()
+            return len(result)
 
     def cleanup_old_memories(self, days: int = 90) -> int:
         """Delete memories older than specified days.
@@ -856,14 +896,15 @@ class SwarmMemory:
             Number of rows deleted
         """
         # DuckDB doesn't support parameter binding in INTERVAL, so use string formatting
-        result = self.conn.execute(
-            f"""
-            DELETE FROM memories
-            WHERE created_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
-            RETURNING key
-            """
-        ).fetchall()
-        return len(result)
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                f"""
+                DELETE FROM memories
+                WHERE created_at < CURRENT_TIMESTAMP - INTERVAL {int(days)} DAY
+                RETURNING key
+                """
+            ).fetchall()
+            return len(result)
 
     def run_full_cleanup(
         self,
@@ -893,10 +934,11 @@ class SwarmMemory:
             deleted["memories"] = self.cleanup_old_memories(memories_days)
 
         # Vacuum to reclaim space
-        self.conn.execute("VACUUM")
+        self.vacuum()
 
         return deleted
 
     def vacuum(self) -> None:
         """Reclaim disk space by vacuuming the database."""
-        self.conn.execute("VACUUM")
+        with self._manager.connection() as conn:
+            conn.execute("VACUUM")

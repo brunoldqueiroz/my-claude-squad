@@ -13,9 +13,10 @@ class TestSwarmMemoryInit:
 
     def test_init_creates_tables(self, memory):
         """All required tables exist after initialization."""
-        tables = memory.conn.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
-        ).fetchall()
+        with memory._manager.connection(read_only=True) as conn:
+            tables = conn.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
+            ).fetchall()
         table_names = {t[0] for t in tables}
 
         assert "memories" in table_names
@@ -27,9 +28,10 @@ class TestSwarmMemoryInit:
     def test_init_creates_indexes(self, memory):
         """Performance indexes are created for frequently queried columns."""
         # Query DuckDB for index information
-        indexes = memory.conn.execute(
-            "SELECT index_name FROM duckdb_indexes()"
-        ).fetchall()
+        with memory._manager.connection(read_only=True) as conn:
+            indexes = conn.execute(
+                "SELECT index_name FROM duckdb_indexes()"
+            ).fetchall()
         index_names = {idx[0] for idx in indexes}
 
         # Check that key indexes exist
@@ -140,9 +142,10 @@ class TestAgentRunOperations:
         """log_run_start creates a record."""
         memory.log_run_start("run-1", "test-agent", "Test task")
 
-        result = memory.conn.execute(
-            "SELECT * FROM agent_runs WHERE id = 'run-1'"
-        ).fetchone()
+        with memory._manager.connection(read_only=True) as conn:
+            result = conn.execute(
+                "SELECT * FROM agent_runs WHERE id = 'run-1'"
+            ).fetchone()
 
         assert result is not None
         assert result[1] == "test-agent"  # agent_name
@@ -153,9 +156,10 @@ class TestAgentRunOperations:
         memory.log_run_start("run-2", "test-agent", "Test task")
         memory.log_run_complete("run-2", TaskStatus.COMPLETED, "Success!", tokens=100)
 
-        result = memory.conn.execute(
-            "SELECT status, result, tokens_used FROM agent_runs WHERE id = 'run-2'"
-        ).fetchone()
+        with memory._manager.connection(read_only=True) as conn:
+            result = conn.execute(
+                "SELECT status, result, tokens_used FROM agent_runs WHERE id = 'run-2'"
+            ).fetchone()
 
         assert result[0] == "completed"
         assert result[1] == "Success!"
@@ -305,15 +309,16 @@ class TestAgentEventOperations:
 class TestSwarmMemoryClose:
     """Tests for cleanup."""
 
-    def test_close_closes_connection(self, temp_db_path):
-        """close() closes the database connection."""
+    def test_close_is_backwards_compatible(self, temp_db_path):
+        """close() is a no-op with short-lived connections (backwards compatible)."""
         mem = SwarmMemory(db_path=temp_db_path)
         mem.store("key", "value")
         mem.close()
 
-        # Trying to use closed connection should fail
-        with pytest.raises(Exception):
-            mem.conn.execute("SELECT 1")
+        # With short-lived connections, operations still work after close()
+        # since each operation gets its own connection
+        result = mem.get("key")
+        assert result == "value"
 
 
 class TestRetentionAndCleanup:
@@ -364,39 +369,41 @@ class TestRetentionAndCleanup:
     def test_cleanup_old_runs_removes_old_data(self, memory):
         """cleanup_old_runs removes runs older than threshold."""
         # Insert runs with manual timestamps
-        memory.conn.execute("""
-            INSERT INTO agent_runs (id, agent_name, task, status, started_at)
-            VALUES
-                ('old-run', 'agent1', 'old task', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY),
-                ('new-run', 'agent1', 'new task', 'completed', CURRENT_TIMESTAMP)
-        """)
+        with memory._manager.connection() as conn:
+            conn.execute("""
+                INSERT INTO agent_runs (id, agent_name, task, status, started_at)
+                VALUES
+                    ('old-run', 'agent1', 'old task', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY),
+                    ('new-run', 'agent1', 'new task', 'completed', CURRENT_TIMESTAMP)
+            """)
 
         deleted = memory.cleanup_old_runs(days=30)
 
         assert deleted == 1
         # Verify old run is gone
-        result = memory.conn.execute(
-            "SELECT id FROM agent_runs WHERE id = 'old-run'"
-        ).fetchone()
+        with memory._manager.connection(read_only=True) as conn:
+            result = conn.execute(
+                "SELECT id FROM agent_runs WHERE id = 'old-run'"
+            ).fetchone()
         assert result is None
 
         # Verify new run remains
-        result = memory.conn.execute(
-            "SELECT id FROM agent_runs WHERE id = 'new-run'"
-        ).fetchone()
+        with memory._manager.connection(read_only=True) as conn:
+            result = conn.execute(
+                "SELECT id FROM agent_runs WHERE id = 'new-run'"
+            ).fetchone()
         assert result is not None
 
     def test_cleanup_old_events_removes_old_data(self, memory):
         """cleanup_old_events removes events older than threshold."""
-        import json
-
         # Insert events with manual timestamps
-        memory.conn.execute("""
-            INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
-            VALUES
-                ('old-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP - INTERVAL 14 DAY),
-                ('new-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP)
-        """)
+        with memory._manager.connection() as conn:
+            conn.execute("""
+                INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
+                VALUES
+                    ('old-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP - INTERVAL 14 DAY),
+                    ('new-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP)
+            """)
 
         deleted = memory.cleanup_old_events(days=7)
 
@@ -404,12 +411,13 @@ class TestRetentionAndCleanup:
 
     def test_cleanup_old_tasks_removes_old_data(self, memory):
         """cleanup_old_tasks removes task log entries older than threshold."""
-        memory.conn.execute("""
-            INSERT INTO task_log (id, description, status, created_at)
-            VALUES
-                ('old-task', 'old description', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY),
-                ('new-task', 'new description', 'completed', CURRENT_TIMESTAMP)
-        """)
+        with memory._manager.connection() as conn:
+            conn.execute("""
+                INSERT INTO task_log (id, description, status, created_at)
+                VALUES
+                    ('old-task', 'old description', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY),
+                    ('new-task', 'new description', 'completed', CURRENT_TIMESTAMP)
+            """)
 
         deleted = memory.cleanup_old_tasks(days=30)
 
@@ -436,12 +444,13 @@ class TestRetentionAndCleanup:
     def test_cleanup_old_memories_removes_old_data(self, memory):
         """cleanup_old_memories removes memories older than threshold."""
         # Insert memories with manual timestamps
-        memory.conn.execute("""
-            INSERT INTO memories (key, value, namespace, metadata, created_at)
-            VALUES
-                ('old-key', 'old value', 'default', '{}', CURRENT_TIMESTAMP - INTERVAL 120 DAY),
-                ('new-key', 'new value', 'default', '{}', CURRENT_TIMESTAMP)
-        """)
+        with memory._manager.connection() as conn:
+            conn.execute("""
+                INSERT INTO memories (key, value, namespace, metadata, created_at)
+                VALUES
+                    ('old-key', 'old value', 'default', '{}', CURRENT_TIMESTAMP - INTERVAL 120 DAY),
+                    ('new-key', 'new value', 'default', '{}', CURRENT_TIMESTAMP)
+            """)
 
         deleted = memory.cleanup_old_memories(days=90)
 
@@ -450,18 +459,19 @@ class TestRetentionAndCleanup:
     def test_run_full_cleanup(self, memory):
         """run_full_cleanup cleans up all tables."""
         # Insert old data in all tables
-        memory.conn.execute("""
-            INSERT INTO agent_runs (id, agent_name, task, status, started_at)
-            VALUES ('old-run', 'agent1', 'task', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY)
-        """)
-        memory.conn.execute("""
-            INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
-            VALUES ('old-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP - INTERVAL 14 DAY)
-        """)
-        memory.conn.execute("""
-            INSERT INTO task_log (id, description, status, created_at)
-            VALUES ('old-task', 'desc', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY)
-        """)
+        with memory._manager.connection() as conn:
+            conn.execute("""
+                INSERT INTO agent_runs (id, agent_name, task, status, started_at)
+                VALUES ('old-run', 'agent1', 'task', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY)
+            """)
+            conn.execute("""
+                INSERT INTO agent_events (id, agent_name, event_type, event_data, timestamp)
+                VALUES ('old-evt', 'agent1', 'heartbeat', '{}', CURRENT_TIMESTAMP - INTERVAL 14 DAY)
+            """)
+            conn.execute("""
+                INSERT INTO task_log (id, description, status, created_at)
+                VALUES ('old-task', 'desc', 'completed', CURRENT_TIMESTAMP - INTERVAL 60 DAY)
+            """)
 
         deleted = memory.run_full_cleanup(
             runs_days=30,
@@ -477,10 +487,11 @@ class TestRetentionAndCleanup:
 
     def test_run_full_cleanup_with_memories(self, memory):
         """run_full_cleanup can include memories cleanup."""
-        memory.conn.execute("""
-            INSERT INTO memories (key, value, namespace, metadata, created_at)
-            VALUES ('old-mem', 'old', 'default', '{}', CURRENT_TIMESTAMP - INTERVAL 120 DAY)
-        """)
+        with memory._manager.connection() as conn:
+            conn.execute("""
+                INSERT INTO memories (key, value, namespace, metadata, created_at)
+                VALUES ('old-mem', 'old', 'default', '{}', CURRENT_TIMESTAMP - INTERVAL 120 DAY)
+            """)
 
         deleted = memory.run_full_cleanup(memories_days=90)
 
@@ -510,9 +521,10 @@ class TestRetentionAndCleanup:
         deleted = memory.run_full_cleanup()
 
         # Verify recent data is preserved
-        result = memory.conn.execute(
-            "SELECT id FROM agent_runs WHERE id = 'recent-run'"
-        ).fetchone()
+        with memory._manager.connection(read_only=True) as conn:
+            result = conn.execute(
+                "SELECT id FROM agent_runs WHERE id = 'recent-run'"
+            ).fetchone()
         assert result is not None
 
         assert memory.get("recent-key") == "recent value"

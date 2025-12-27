@@ -3,6 +3,9 @@
 This module provides semantic search capabilities on top of the key-value memory.
 It uses sentence-transformers for embedding generation and cosine similarity for search.
 
+Uses short-lived connections with retry logic to avoid lock conflicts
+when multiple processes access the same database file.
+
 Installation:
     uv sync --extra semantic
 
@@ -22,6 +25,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from orchestrator.connection import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -454,6 +459,10 @@ class SemanticMemory:
     Extends the key-value memory with vector embeddings for similarity-based
     retrieval. Stores embeddings alongside memories in DuckDB.
 
+    Uses short-lived connections to avoid lock conflicts. Each operation
+    opens a connection, performs the query, and closes it immediately.
+    Retry logic handles transient lock errors.
+
     Supports optional ANN (Approximate Nearest Neighbor) for fast search on
     large datasets. Enable with use_ann=True (requires hnswlib).
 
@@ -499,15 +508,13 @@ class SemanticMemory:
                 "Install with: uv sync --extra semantic"
             )
 
-        import duckdb
-
         if db_path is None:
             swarm_dir = Path(__file__).parent.parent / ".swarm"
             swarm_dir.mkdir(exist_ok=True)
             db_path = swarm_dir / "memory.duckdb"
 
         self.db_path = db_path
-        self.conn = duckdb.connect(str(db_path))
+        self._manager = ConnectionManager(db_path)
         self._provider = embedding_provider or SentenceTransformerProvider()
         self._use_ann = use_ann and _HNSWLIB_AVAILABLE
         self._ann_threshold = ann_threshold
@@ -522,24 +529,25 @@ class SemanticMemory:
         """Initialize embedding tables."""
         # Create embeddings table if it doesn't exist
         # Store embeddings as JSON array of floats
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS memory_embeddings (
-                key VARCHAR PRIMARY KEY,
-                embedding JSON NOT NULL,
-                model VARCHAR NOT NULL,
-                dimension INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        # Create index for faster lookups
-        try:
-            self.conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_embeddings_key
-                ON memory_embeddings(key)
+        with self._manager.connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS memory_embeddings (
+                    key VARCHAR PRIMARY KEY,
+                    embedding JSON NOT NULL,
+                    model VARCHAR NOT NULL,
+                    dimension INTEGER NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
-        except Exception:
-            pass  # Index might already exist
+
+            # Create index for faster lookups
+            try:
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_embeddings_key
+                    ON memory_embeddings(key)
+                """)
+            except Exception:
+                pass  # Index might already exist
 
     def _get_ann_index_path(self) -> Path:
         """Get the path for the ANN index file."""
@@ -590,9 +598,10 @@ class SemanticMemory:
             )
 
         # Get all embeddings from database
-        rows = self.conn.execute("""
-            SELECT key, embedding FROM memory_embeddings
-        """).fetchall()
+        rows = self._manager.execute(
+            "SELECT key, embedding FROM memory_embeddings",
+            read_only=True,
+        )
 
         if not rows:
             logger.info("No embeddings to index")
@@ -661,28 +670,30 @@ class SemanticMemory:
             namespace: Optional namespace for organization
             metadata: Optional metadata dict
         """
-        # Store in main memories table
-        metadata_json = json.dumps(metadata or {})
-        self.conn.execute(
-            """
-            INSERT OR REPLACE INTO memories (key, value, namespace, metadata, created_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """,
-            [key, value, namespace, metadata_json],
-        )
-
-        # Generate and store embedding
+        # Generate embedding first (before getting connection)
         embedding = self._provider.embed(value)
         embedding_json = json.dumps(embedding)
+        metadata_json = json.dumps(metadata or {})
 
-        self.conn.execute(
-            """
-            INSERT OR REPLACE INTO memory_embeddings
-            (key, embedding, model, dimension, created_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """,
-            [key, embedding_json, "sentence-transformers", len(embedding)],
-        )
+        with self._manager.connection() as conn:
+            # Store in main memories table
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO memories (key, value, namespace, metadata, created_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                [key, value, namespace, metadata_json],
+            )
+
+            # Store embedding
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO memory_embeddings
+                (key, embedding, model, dimension, created_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                [key, embedding_json, "sentence-transformers", len(embedding)],
+            )
 
         # Add to ANN index if enabled
         if self._ann_index is not None:
@@ -707,34 +718,35 @@ class SemanticMemory:
         if not items:
             return 0
 
-        # Extract texts for batch embedding
+        # Extract texts for batch embedding (before getting connection)
         texts = [item["value"] for item in items]
         embeddings = self._provider.embed_batch(texts)
 
-        for item, embedding in zip(items, embeddings):
-            key = item["key"]
-            value = item["value"]
-            metadata = item.get("metadata", {})
+        with self._manager.connection() as conn:
+            for item, embedding in zip(items, embeddings):
+                key = item["key"]
+                value = item["value"]
+                metadata = item.get("metadata", {})
 
-            metadata_json = json.dumps(metadata)
-            embedding_json = json.dumps(embedding)
+                metadata_json = json.dumps(metadata)
+                embedding_json = json.dumps(embedding)
 
-            self.conn.execute(
-                """
-                INSERT OR REPLACE INTO memories (key, value, namespace, metadata, created_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                """,
-                [key, value, namespace, metadata_json],
-            )
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO memories (key, value, namespace, metadata, created_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """,
+                    [key, value, namespace, metadata_json],
+                )
 
-            self.conn.execute(
-                """
-                INSERT OR REPLACE INTO memory_embeddings
-                (key, embedding, model, dimension, created_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                """,
-                [key, embedding_json, "sentence-transformers", len(embedding)],
-            )
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO memory_embeddings
+                    (key, embedding, model, dimension, created_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """,
+                    [key, embedding_json, "sentence-transformers", len(embedding)],
+                )
 
         # Add all to ANN index if enabled
         if self._ann_index is not None:
@@ -809,14 +821,15 @@ class SemanticMemory:
                 continue
 
             # Fetch full memory data
-            row = self.conn.execute(
+            row = self._manager.execute_one(
                 """
                 SELECT m.value, m.namespace, m.metadata, m.created_at
                 FROM memories m
                 WHERE m.key = ?
                 """,
                 [key],
-            ).fetchone()
+                read_only=True,
+            )
 
             if row:
                 value, ns, metadata_json, created_at = row
@@ -865,7 +878,7 @@ class SemanticMemory:
             sql += " WHERE m.namespace = ?"
             params.append(namespace)
 
-        rows = self.conn.execute(sql, params).fetchall()
+        rows = self._manager.execute(sql, params, read_only=True)
 
         # Calculate similarities
         results: list[tuple[SemanticSearchResult, float]] = []
@@ -901,10 +914,11 @@ class SemanticMemory:
         Returns:
             Embedding vector or None if not found
         """
-        result = self.conn.execute(
+        result = self._manager.execute_one(
             "SELECT embedding FROM memory_embeddings WHERE key = ?",
             [key],
-        ).fetchone()
+            read_only=True,
+        )
 
         if result:
             return json.loads(result[0])
@@ -919,10 +933,11 @@ class SemanticMemory:
         Returns:
             True if embedding exists
         """
-        result = self.conn.execute(
+        result = self._manager.execute_one(
             "SELECT 1 FROM memory_embeddings WHERE key = ?",
             [key],
-        ).fetchone()
+            read_only=True,
+        )
         return result is not None
 
     def delete_embedding(self, key: str) -> bool:
@@ -934,11 +949,12 @@ class SemanticMemory:
         Returns:
             True if deleted, False if not found
         """
-        result = self.conn.execute(
-            "DELETE FROM memory_embeddings WHERE key = ? RETURNING key",
-            [key],
-        ).fetchone()
-        return result is not None
+        with self._manager.connection() as conn:
+            result = conn.execute(
+                "DELETE FROM memory_embeddings WHERE key = ? RETURNING key",
+                [key],
+            ).fetchone()
+            return result is not None
 
     def delete_semantic(self, key: str) -> bool:
         """Delete both memory and its embedding.
@@ -953,16 +969,17 @@ class SemanticMemory:
         if self._ann_index is not None:
             self._ann_index.remove_item(key)
 
-        # Delete embedding
-        self.conn.execute("DELETE FROM memory_embeddings WHERE key = ?", [key])
+        with self._manager.connection() as conn:
+            # Delete embedding
+            conn.execute("DELETE FROM memory_embeddings WHERE key = ?", [key])
 
-        # Delete memory
-        result = self.conn.execute(
-            "DELETE FROM memories WHERE key = ? RETURNING key",
-            [key],
-        ).fetchone()
+            # Delete memory
+            result = conn.execute(
+                "DELETE FROM memories WHERE key = ? RETURNING key",
+                [key],
+            ).fetchone()
 
-        return result is not None
+            return result is not None
 
     def reindex_all(self) -> int:
         """Regenerate embeddings for all memories.
@@ -974,29 +991,31 @@ class SemanticMemory:
             Number of memories reindexed
         """
         # Get all memories
-        rows = self.conn.execute(
-            "SELECT key, value FROM memories"
-        ).fetchall()
+        rows = self._manager.execute(
+            "SELECT key, value FROM memories",
+            read_only=True,
+        )
 
         if not rows:
             return 0
 
-        # Batch embed all values
+        # Batch embed all values (before getting write connection)
         keys = [row[0] for row in rows]
         values = [row[1] for row in rows]
         embeddings = self._provider.embed_batch(values)
 
         # Update embeddings
-        for key, embedding in zip(keys, embeddings):
-            embedding_json = json.dumps(embedding)
-            self.conn.execute(
-                """
-                INSERT OR REPLACE INTO memory_embeddings
-                (key, embedding, model, dimension, created_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                """,
-                [key, embedding_json, "sentence-transformers", len(embedding)],
-            )
+        with self._manager.connection() as conn:
+            for key, embedding in zip(keys, embeddings):
+                embedding_json = json.dumps(embedding)
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO memory_embeddings
+                    (key, embedding, model, dimension, created_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """,
+                    [key, embedding_json, "sentence-transformers", len(embedding)],
+                )
 
         # Rebuild ANN index if enabled
         if self._use_ann:
@@ -1011,21 +1030,22 @@ class SemanticMemory:
         Returns:
             Dict with memory and embedding counts
         """
-        memory_count = self.conn.execute(
-            "SELECT COUNT(*) FROM memories"
-        ).fetchone()[0]
+        with self._manager.connection(read_only=True) as conn:
+            memory_count = conn.execute(
+                "SELECT COUNT(*) FROM memories"
+            ).fetchone()[0]
 
-        embedding_count = self.conn.execute(
-            "SELECT COUNT(*) FROM memory_embeddings"
-        ).fetchone()[0]
+            embedding_count = conn.execute(
+                "SELECT COUNT(*) FROM memory_embeddings"
+            ).fetchone()[0]
 
-        # Get embeddings by namespace
-        namespace_stats = self.conn.execute("""
-            SELECT m.namespace, COUNT(*) as count
-            FROM memories m
-            INNER JOIN memory_embeddings e ON m.key = e.key
-            GROUP BY m.namespace
-        """).fetchall()
+            # Get embeddings by namespace
+            namespace_stats = conn.execute("""
+                SELECT m.namespace, COUNT(*) as count
+                FROM memories m
+                INNER JOIN memory_embeddings e ON m.key = e.key
+                GROUP BY m.namespace
+            """).fetchall()
 
         stats = {
             "total_memories": memory_count,
@@ -1045,8 +1065,12 @@ class SemanticMemory:
         return stats
 
     def close(self) -> None:
-        """Close the database connection."""
-        self.conn.close()
+        """Close the database connection.
+
+        Note: With short-lived connections, this is now a no-op.
+        Kept for backwards compatibility.
+        """
+        pass  # Connections are now short-lived, no persistent connection to close
 
 
 # Singleton instance
