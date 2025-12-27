@@ -11,7 +11,15 @@ from .events import get_event_bus, create_event
 from .metrics import get_metrics_collector
 from .scheduler import TaskScheduler
 from .tracing import get_langfuse, is_enabled as langfuse_enabled
-from .types import AgentEventType, AgentStatus, Task, TaskStatus
+from .types import (
+    AgentEventType,
+    AgentStatus,
+    DecompositionResult,
+    ExecutionMode,
+    Subtask,
+    Task,
+    TaskStatus,
+)
 
 # Initialize MCP server
 mcp = FastMCP("my-claude-squad")
@@ -158,30 +166,227 @@ def spawn_agent(agent_name: str, task: str) -> dict[str, Any]:
 def decompose_task(task: str) -> dict[str, Any]:
     """Decompose a complex task into subtasks with agent assignments.
 
-    Breaks down a complex multi-part task into smaller subtasks
-    and assigns the best agent to each one.
+    Returns a structured prompt for Claude Code to analyze the task
+    and produce a decomposition. Claude Code should analyze the task,
+    identify subtasks, dependencies, and appropriate agents, then call
+    submit_decomposition with the result.
 
     Args:
         task: Complex task description to decompose
 
     Returns:
-        List of subtasks with agent assignments
+        Decomposition prompt with available agents and expected schema
     """
     coordinator = get_coordinator()
-    subtasks = coordinator.decompose_task(task)
+    agents = coordinator.registry.list_agents()
+
+    # Build agent summary for Claude Code
+    agent_summary = []
+    for agent in agents:
+        agent_summary.append({
+            "name": agent.name,
+            "specialty": agent.description[:150].split("\n")[0],
+            "model": agent.model.value,
+            "keywords": agent.triggers[:5],
+        })
 
     return {
-        "original_task": task,
-        "subtask_count": len(subtasks),
+        "action": "analyze_and_decompose",
+        "task": task,
+        "instructions": """Analyze this task and decompose it into subtasks.
+
+For each subtask, determine:
+1. A clear, actionable description
+2. The best agent from the available list
+3. Dependencies on other subtasks (by ID)
+4. Whether it can run in parallel with siblings
+
+After analysis, call `submit_decomposition` with your structured result.
+
+Consider:
+- Natural task boundaries (action verbs, numbered steps, "then"/"after" connectors)
+- Data dependencies (one task needs output from another)
+- Parallelization opportunities (independent tasks can run together)
+- Agent expertise matching (use agent keywords and specialties)""",
+        "available_agents": agent_summary,
+        "response_schema": {
+            "subtasks": [
+                {
+                    "id": "string (short unique ID, e.g., 't1', 't2')",
+                    "description": "string (clear, actionable task description)",
+                    "agent": "string (agent name from available_agents)",
+                    "depends_on": ["list of subtask IDs this depends on"],
+                    "execution_mode": "parallel | sequential",
+                    "priority": "int 1-10 (10=highest)",
+                    "reasoning": "string (brief explanation of agent choice)",
+                }
+            ],
+            "parallel_groups": [["list of task IDs that can run simultaneously"]],
+            "execution_order": ["ordered list of task IDs respecting dependencies"],
+            "analysis": "string (brief analysis of the overall task structure)",
+        },
+        "example": {
+            "subtasks": [
+                {
+                    "id": "t1",
+                    "description": "Extract data from Snowflake tables",
+                    "agent": "snowflake-specialist",
+                    "depends_on": [],
+                    "execution_mode": "parallel",
+                    "priority": 8,
+                    "reasoning": "Snowflake extraction requires specialized knowledge",
+                },
+                {
+                    "id": "t2",
+                    "description": "Transform data with PySpark",
+                    "agent": "spark-specialist",
+                    "depends_on": ["t1"],
+                    "execution_mode": "sequential",
+                    "priority": 7,
+                    "reasoning": "Depends on extracted data from t1",
+                },
+            ],
+            "parallel_groups": [["t1"], ["t2"]],
+            "execution_order": ["t1", "t2"],
+            "analysis": "Pipeline with extraction then transformation phases",
+        },
+    }
+
+
+@mcp.tool()
+def submit_decomposition(
+    original_task: str,
+    subtasks: list[dict[str, Any]],
+    parallel_groups: list[list[str]] | None = None,
+    execution_order: list[str] | None = None,
+    analysis: str | None = None,
+    auto_schedule: bool = True,
+) -> dict[str, Any]:
+    """Submit a task decomposition from Claude Code's analysis.
+
+    Receives the structured decomposition produced by Claude Code
+    after analyzing a task via decompose_task.
+
+    Args:
+        original_task: The original complex task
+        subtasks: List of subtask definitions with agent assignments
+        parallel_groups: Groups of task IDs that can run simultaneously
+        execution_order: Suggested execution order respecting dependencies
+        analysis: Claude's analysis of the task structure
+        auto_schedule: If True, automatically add tasks to scheduler
+
+    Returns:
+        Confirmation with created task IDs and workflow info
+    """
+    import uuid
+
+    coordinator = get_coordinator()
+    scheduler = get_scheduler()
+
+    # Validate and create subtasks
+    created_tasks: list[dict[str, Any]] = []
+    id_mapping: dict[str, str] = {}  # Map submitted IDs to generated UUIDs
+    validation_errors: list[str] = []
+
+    for subtask_def in subtasks:
+        submitted_id = subtask_def.get("id", str(uuid.uuid4())[:8])
+        task_id = str(uuid.uuid4())[:8]
+        id_mapping[submitted_id] = task_id
+
+        description = subtask_def.get("description", "")
+        agent_name = subtask_def.get("agent")
+
+        # Validate agent exists
+        if agent_name:
+            agent = coordinator.registry.get_agent(agent_name)
+            if agent is None:
+                validation_errors.append(f"Agent '{agent_name}' not found for subtask '{submitted_id}'")
+                agent_name = None  # Will be routed later
+
+        # Parse execution mode
+        mode_str = subtask_def.get("execution_mode", "sequential")
+        try:
+            exec_mode = ExecutionMode(mode_str)
+        except ValueError:
+            exec_mode = ExecutionMode.SEQUENTIAL
+
+        created_tasks.append({
+            "submitted_id": submitted_id,
+            "task_id": task_id,
+            "description": description,
+            "agent": agent_name,
+            "depends_on": subtask_def.get("depends_on", []),
+            "execution_mode": exec_mode.value,
+            "priority": subtask_def.get("priority", 5),
+            "reasoning": subtask_def.get("reasoning"),
+        })
+
+    # Resolve dependency IDs
+    for task_info in created_tasks:
+        resolved_deps = []
+        for dep_id in task_info["depends_on"]:
+            if dep_id in id_mapping:
+                resolved_deps.append(id_mapping[dep_id])
+            else:
+                validation_errors.append(f"Dependency '{dep_id}' not found for subtask '{task_info['submitted_id']}'")
+        task_info["resolved_deps"] = resolved_deps
+
+    # Add to scheduler if requested
+    scheduled_ids: list[str] = []
+    if auto_schedule and not validation_errors:
+        for task_info in created_tasks:
+            new_task = Task(
+                id=task_info["task_id"],
+                description=task_info["description"],
+                agent_name=task_info["agent"],
+                status=TaskStatus.PENDING,
+            )
+            scheduler.add_task(new_task, depends_on=task_info["resolved_deps"] or None)
+            scheduled_ids.append(task_info["task_id"])
+
+    # Resolve parallel groups IDs
+    resolved_parallel_groups: list[list[str]] = []
+    if parallel_groups:
+        for group in parallel_groups:
+            resolved_group = [id_mapping.get(tid, tid) for tid in group]
+            resolved_parallel_groups.append(resolved_group)
+
+    # Resolve execution order IDs
+    resolved_execution_order: list[str] = []
+    if execution_order:
+        resolved_execution_order = [id_mapping.get(tid, tid) for tid in execution_order]
+
+    # Get ready tasks
+    ready_tasks = scheduler.get_ready_tasks() if auto_schedule else []
+
+    result = {
+        "success": len(validation_errors) == 0,
+        "original_task": original_task,
+        "subtask_count": len(created_tasks),
         "subtasks": [
             {
-                "description": desc,
-                "assigned_agent": agent.name if agent else None,
-                "agent_model": agent.model.value if agent else None,
+                "id": t["task_id"],
+                "description": t["description"][:100],
+                "agent": t["agent"],
+                "depends_on": t["resolved_deps"],
+                "execution_mode": t["execution_mode"],
             }
-            for desc, agent in subtasks
+            for t in created_tasks
         ],
+        "id_mapping": id_mapping,
+        "parallel_groups": resolved_parallel_groups,
+        "execution_order": resolved_execution_order,
+        "analysis": analysis,
     }
+
+    if auto_schedule:
+        result["scheduled"] = True
+        result["ready_to_execute"] = [t.id for t in ready_tasks]
+
+    if validation_errors:
+        result["validation_errors"] = validation_errors
+
+    return result
 
 
 @mcp.tool()

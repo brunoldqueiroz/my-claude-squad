@@ -171,3 +171,32 @@ class ScheduledTask(Task):
     max_retries: int = 3
     circuit_breaker: str | None = None  # Agent circuit breaker to use
     priority: int = Field(default=5, ge=1, le=10)  # 1=lowest, 10=highest
+
+
+class ExecutionMode(str, Enum):
+    """How subtasks should be executed relative to siblings."""
+
+    PARALLEL = "parallel"  # Can run simultaneously with other parallel tasks
+    SEQUENTIAL = "sequential"  # Must wait for previous tasks
+
+
+class Subtask(BaseModel):
+    """A decomposed subtask from Claude Code's analysis."""
+
+    id: str
+    description: str
+    agent: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    execution_mode: ExecutionMode = ExecutionMode.SEQUENTIAL
+    priority: int = Field(default=5, ge=1, le=10)
+    reasoning: str | None = None  # Why this agent was chosen
+
+
+class DecompositionResult(BaseModel):
+    """Result of task decomposition by Claude Code."""
+
+    original_task: str
+    subtasks: list[Subtask]
+    parallel_groups: list[list[str]] = Field(default_factory=list)  # Groups of task IDs that can run together
+    execution_order: list[str] = Field(default_factory=list)  # Suggested order respecting dependencies
+    analysis: str | None = None  # Claude's analysis of the task

@@ -263,32 +263,120 @@ class TestSpawnAgent:
 class TestDecomposeTask:
     """Tests for the decompose_task MCP tool."""
 
-    def test_decomposes_task_with_subtasks(
-        self, mock_coordinator, sample_agent_fixture
-    ):
-        """decompose_task returns subtasks with agents."""
-        mock_coordinator.decompose_task.return_value = [
-            ("Write tests", sample_agent_fixture),
-            ("Run tests", None),
-        ]
+    def test_returns_analysis_prompt(self, mock_coordinator, sample_agent_fixture):
+        """decompose_task returns a prompt for Claude Code to analyze."""
+        mock_coordinator.registry.list_agents.return_value = [sample_agent_fixture]
 
         from orchestrator.server import decompose_task
 
         result = decompose_task.fn("Write and run tests")
 
-        assert result["subtask_count"] == 2
-        assert result["subtasks"][0]["assigned_agent"] == "test-agent"
-        assert result["subtasks"][1]["assigned_agent"] is None
+        assert result["action"] == "analyze_and_decompose"
+        assert result["task"] == "Write and run tests"
+        assert "instructions" in result
+        assert "available_agents" in result
+        assert "response_schema" in result
 
-    def test_preserves_original_task(self, mock_coordinator):
-        """decompose_task includes original task in result."""
-        mock_coordinator.decompose_task.return_value = [("Simple task", None)]
+    def test_includes_available_agents(self, mock_coordinator, sample_agent_fixture):
+        """decompose_task includes list of available agents."""
+        mock_coordinator.registry.list_agents.return_value = [sample_agent_fixture]
 
         from orchestrator.server import decompose_task
 
-        result = decompose_task.fn("Original task description")
+        result = decompose_task.fn("Complex task")
 
-        assert result["original_task"] == "Original task description"
+        assert len(result["available_agents"]) == 1
+        assert result["available_agents"][0]["name"] == "test-agent"
+        assert "keywords" in result["available_agents"][0]
+
+    def test_includes_example_decomposition(self, mock_coordinator, sample_agent_fixture):
+        """decompose_task includes an example for Claude Code."""
+        mock_coordinator.registry.list_agents.return_value = [sample_agent_fixture]
+
+        from orchestrator.server import decompose_task
+
+        result = decompose_task.fn("Complex task")
+
+        assert "example" in result
+        assert "subtasks" in result["example"]
+
+
+class TestSubmitDecomposition:
+    """Tests for the submit_decomposition MCP tool."""
+
+    def test_submits_valid_decomposition(self, mock_coordinator, mock_scheduler, sample_agent_fixture):
+        """submit_decomposition creates tasks from Claude's analysis."""
+        mock_coordinator.registry.get_agent.return_value = sample_agent_fixture
+        mock_scheduler.get_ready_tasks.return_value = []
+
+        from orchestrator.server import submit_decomposition
+
+        result = submit_decomposition.fn(
+            original_task="Complex task",
+            subtasks=[
+                {"id": "t1", "description": "First task", "agent": "test-agent", "depends_on": []},
+                {"id": "t2", "description": "Second task", "agent": "test-agent", "depends_on": ["t1"]},
+            ],
+            execution_order=["t1", "t2"],
+            analysis="Two-phase task",
+        )
+
+        assert result["success"] is True
+        assert result["subtask_count"] == 2
+        assert result["analysis"] == "Two-phase task"
+        assert "t1" in result["id_mapping"]
+        assert "t2" in result["id_mapping"]
+
+    def test_validates_agent_exists(self, mock_coordinator, mock_scheduler):
+        """submit_decomposition reports validation errors for unknown agents."""
+        mock_coordinator.registry.get_agent.return_value = None
+        mock_scheduler.get_ready_tasks.return_value = []
+
+        from orchestrator.server import submit_decomposition
+
+        result = submit_decomposition.fn(
+            original_task="Task",
+            subtasks=[{"id": "t1", "description": "Task", "agent": "unknown-agent"}],
+            auto_schedule=False,
+        )
+
+        assert "validation_errors" in result
+        assert any("unknown-agent" in err for err in result["validation_errors"])
+
+    def test_resolves_dependencies(self, mock_coordinator, mock_scheduler, sample_agent_fixture):
+        """submit_decomposition resolves dependency IDs to task UUIDs."""
+        mock_coordinator.registry.get_agent.return_value = sample_agent_fixture
+        mock_scheduler.get_ready_tasks.return_value = []
+
+        from orchestrator.server import submit_decomposition
+
+        result = submit_decomposition.fn(
+            original_task="Task",
+            subtasks=[
+                {"id": "t1", "description": "First", "agent": "test-agent"},
+                {"id": "t2", "description": "Second", "agent": "test-agent", "depends_on": ["t1"]},
+            ],
+        )
+
+        # t2's resolved deps should contain the UUID mapped from t1
+        t1_uuid = result["id_mapping"]["t1"]
+        t2_subtask = next(s for s in result["subtasks"] if s["id"] == result["id_mapping"]["t2"])
+        assert t1_uuid in t2_subtask["depends_on"]
+
+    def test_schedules_tasks_by_default(self, mock_coordinator, mock_scheduler, sample_agent_fixture):
+        """submit_decomposition adds tasks to scheduler by default."""
+        mock_coordinator.registry.get_agent.return_value = sample_agent_fixture
+        mock_scheduler.get_ready_tasks.return_value = []
+
+        from orchestrator.server import submit_decomposition
+
+        result = submit_decomposition.fn(
+            original_task="Task",
+            subtasks=[{"id": "t1", "description": "Task", "agent": "test-agent"}],
+        )
+
+        assert result["scheduled"] is True
+        mock_scheduler.add_task.assert_called()
 
 
 # === Tests for memory_store ===

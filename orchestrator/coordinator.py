@@ -90,6 +90,22 @@ class Coordinator:
             "agent": "plugin-developer",
             "command": "plugin-developer",
             "skill": "plugin-developer",
+            # Orchestration / Complex Tasks
+            "complex": "squad-orchestrator",
+            "coordinate": "squad-orchestrator",
+            "decompose": "squad-orchestrator",
+            "plan": "squad-orchestrator",
+            "orchestrate": "squad-orchestrator",
+            "multi-agent": "squad-orchestrator",
+            "multi-specialist": "squad-orchestrator",
+            # Self-Improvement
+            "improve": "squad-orchestrator",
+            "audit": "squad-orchestrator",
+            "self-improve": "squad-orchestrator",
+            "coverage": "squad-orchestrator",
+            "refactor": "squad-orchestrator",
+            "optimize routing": "squad-orchestrator",
+            "add tests": "squad-orchestrator",
         }
 
         # Check routing rules
@@ -112,9 +128,9 @@ class Coordinator:
                 agent = matches[0]
                 confidence = "medium"
 
-        # Default to planner-orchestrator for complex tasks
+        # Default to squad-orchestrator for complex tasks
         if not agent:
-            agent = self.registry.get_agent("planner-orchestrator")
+            agent = self.registry.get_agent("squad-orchestrator")
 
         # Update Langfuse span with routing metadata
         if agent:
