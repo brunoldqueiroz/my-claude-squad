@@ -120,6 +120,50 @@ class SwarmMemory:
             )
         """)
 
+        # Create indexes for frequently queried columns
+        self._create_indexes()
+
+    def _create_indexes(self) -> None:
+        """Create indexes for frequently queried columns.
+
+        Uses CREATE INDEX IF NOT EXISTS to be idempotent.
+        Indexes are created for columns used in WHERE, ORDER BY, and JOIN clauses.
+        """
+        indexes = [
+            # memories: namespace is used in WHERE and ORDER BY
+            ("idx_memories_namespace", "memories", "namespace"),
+            ("idx_memories_created_at", "memories", "created_at"),
+
+            # agent_runs: frequently filtered and sorted by these columns
+            ("idx_agent_runs_agent_name", "agent_runs", "agent_name"),
+            ("idx_agent_runs_status", "agent_runs", "status"),
+            ("idx_agent_runs_started_at", "agent_runs", "started_at DESC"),
+
+            # task_log: filtered and cleaned up by created_at
+            ("idx_task_log_agent_name", "task_log", "agent_name"),
+            ("idx_task_log_status", "task_log", "status"),
+            ("idx_task_log_created_at", "task_log", "created_at"),
+
+            # agent_events: frequently filtered and sorted
+            ("idx_agent_events_agent_name", "agent_events", "agent_name"),
+            ("idx_agent_events_event_type", "agent_events", "event_type"),
+            ("idx_agent_events_timestamp", "agent_events", "timestamp DESC"),
+
+            # sessions: filtered by status, sorted by updated_at
+            ("idx_sessions_status", "sessions", "status"),
+            ("idx_sessions_updated_at", "sessions", "updated_at DESC"),
+            ("idx_sessions_swarm_id", "sessions", "swarm_id"),
+        ]
+
+        for index_name, table, column in indexes:
+            try:
+                self.conn.execute(
+                    f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})"
+                )
+            except Exception:
+                # Index might already exist with different definition
+                pass
+
     # === Memory Operations ===
 
     def store(self, key: str, value: str, namespace: str = "default", metadata: dict[str, Any] | None = None) -> None:
@@ -479,13 +523,27 @@ class SwarmMemory:
         tasks_json = json.dumps([t.model_dump() for t in session.tasks], default=str)
         metadata_json = json.dumps(session.metadata)
 
+        # Use INSERT ON CONFLICT instead of INSERT OR REPLACE to avoid
+        # DuckDB bug where indexes on updated columns prevent updates
         self.conn.execute(
             """
-            INSERT OR REPLACE INTO sessions (
+            INSERT INTO sessions (
                 id, name, description, status, swarm_id, tasks,
                 current_task_index, created_at, updated_at, paused_at,
                 completed_at, metadata
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                status = EXCLUDED.status,
+                swarm_id = EXCLUDED.swarm_id,
+                tasks = EXCLUDED.tasks,
+                current_task_index = EXCLUDED.current_task_index,
+                created_at = EXCLUDED.created_at,
+                updated_at = EXCLUDED.updated_at,
+                paused_at = EXCLUDED.paused_at,
+                completed_at = EXCLUDED.completed_at,
+                metadata = EXCLUDED.metadata
         """,
             [
                 session.id,

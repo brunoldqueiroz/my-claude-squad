@@ -624,11 +624,19 @@ class TestMCPSchedulerTools:
         assert len(result["tasks"]) == 3
         assert len(result["execution_order"]) == 3
 
-    def test_clear_workflow_tool(self, reset_server_singletons, monkeypatch):
+    def test_clear_workflow_tool(self, temp_agents_dir, temp_db_path, reset_server_singletons, monkeypatch):
         """clear_workflow MCP tool removes all scheduled tasks."""
         import orchestrator.server as server
 
+        monkeypatch.setattr(server, "_coordinator", None)
         monkeypatch.setattr(server, "_scheduler", None)
+
+        def mock_get_coordinator():
+            if server._coordinator is None:
+                server._coordinator = Coordinator(agents_dir=temp_agents_dir, db_path=temp_db_path)
+            return server._coordinator
+
+        monkeypatch.setattr(server, "get_coordinator", mock_get_coordinator)
 
         # Create some tasks
         server.create_dependent_task.fn("Task 1")

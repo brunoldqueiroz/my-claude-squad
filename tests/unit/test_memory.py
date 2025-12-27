@@ -24,6 +24,27 @@ class TestSwarmMemoryInit:
         assert "agent_health" in table_names
         assert "agent_events" in table_names
 
+    def test_init_creates_indexes(self, memory):
+        """Performance indexes are created for frequently queried columns."""
+        # Query DuckDB for index information
+        indexes = memory.conn.execute(
+            "SELECT index_name FROM duckdb_indexes()"
+        ).fetchall()
+        index_names = {idx[0] for idx in indexes}
+
+        # Check that key indexes exist
+        expected_indexes = [
+            "idx_memories_namespace",
+            "idx_agent_runs_agent_name",
+            "idx_agent_runs_status",
+            "idx_agent_events_agent_name",
+            "idx_agent_events_event_type",
+            "idx_sessions_status",
+        ]
+
+        for expected in expected_indexes:
+            assert expected in index_names, f"Expected index {expected} not found"
+
 
 class TestMemoryOperations:
     """Tests for key-value memory operations."""

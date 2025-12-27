@@ -101,6 +101,7 @@ def get_session_manager() -> SessionManager:
 
 
 @mcp.tool()
+@observe(name="list_agents")
 def list_agents() -> dict[str, Any]:
     """List all available agents with their specialties.
 
@@ -495,6 +496,7 @@ def memory_store(key: str, value: str, namespace: str = "default") -> dict[str, 
 
 
 @mcp.tool()
+@observe(name="memory_query")
 def memory_query(pattern: str, namespace: str | None = None, limit: int = 10) -> dict[str, Any]:
     """Query persistent memory by pattern.
 
@@ -528,6 +530,7 @@ def memory_query(pattern: str, namespace: str | None = None, limit: int = 10) ->
 
 
 @mcp.tool()
+@observe(name="get_storage_stats")
 def get_storage_stats() -> dict[str, Any]:
     """Get storage statistics for the DuckDB database.
 
@@ -568,6 +571,7 @@ def get_storage_stats() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="cleanup_storage")
 def cleanup_storage(
     runs_days: int = 30,
     events_days: int = 7,
@@ -637,6 +641,7 @@ def cleanup_storage(
 
 
 @mcp.tool()
+@observe(name="swarm_status")
 def swarm_status() -> dict[str, Any]:
     """Get current swarm status and statistics.
 
@@ -725,6 +730,7 @@ def complete_run(
 
 
 @mcp.tool()
+@observe(name="get_agent_health")
 def get_agent_health(agent_name: str | None = None) -> dict[str, Any]:
     """Get health status for one or all agents.
 
@@ -801,6 +807,7 @@ def get_agent_health(agent_name: str | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="set_agent_status")
 def set_agent_status(agent_name: str, status: str, reason: str | None = None) -> dict[str, Any]:
     """Manually set an agent's status.
 
@@ -922,6 +929,7 @@ def create_dependent_task(
 
 
 @mcp.tool()
+@observe(name="get_task_graph")
 def get_task_graph() -> dict[str, Any]:
     """Get the current task dependency graph.
 
@@ -935,6 +943,7 @@ def get_task_graph() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="get_ready_tasks")
 def get_ready_tasks() -> dict[str, Any]:
     """Get tasks that are ready to execute.
 
@@ -1093,6 +1102,7 @@ def execute_workflow(tasks: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="clear_workflow")
 def clear_workflow() -> dict[str, Any]:
     """Clear all scheduled tasks.
 
@@ -1116,6 +1126,7 @@ def clear_workflow() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="get_health")
 def get_health() -> dict[str, Any]:
     """Get system health status.
 
@@ -1161,6 +1172,7 @@ def get_health() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="get_metrics")
 def get_metrics(reset: bool = False) -> dict[str, Any]:
     """Get orchestration metrics.
 
@@ -1183,6 +1195,7 @@ def get_metrics(reset: bool = False) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="get_events")
 def get_events(
     limit: int = 50,
     event_type: str | None = None,
@@ -1240,6 +1253,7 @@ def get_events(
 
 
 @mcp.tool()
+@observe(name="emit_event")
 def emit_event(
     agent_name: str,
     event_type: str,
@@ -1295,6 +1309,7 @@ def emit_event(
 
 
 @mcp.tool()
+@observe(name="create_pipeline")
 def create_pipeline(
     source: str,
     target: str,
@@ -1323,6 +1338,7 @@ def create_pipeline(
 
 
 @mcp.tool()
+@observe(name="analyze_query")
 def analyze_query(sql: str) -> dict[str, Any]:
     """Analyze SQL query and provide optimization recommendations.
 
@@ -1339,6 +1355,7 @@ def analyze_query(sql: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="analyze_data")
 def analyze_data(path: str, sample_size: int = 1000) -> dict[str, Any]:
     """Profile and analyze a dataset for quality and patterns.
 
@@ -1355,6 +1372,7 @@ def analyze_data(path: str, sample_size: int = 1000) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="create_dockerfile")
 def create_dockerfile(
     project_type: str = "python",
     optimize_for: str = "size",
@@ -1379,6 +1397,7 @@ def create_dockerfile(
 
 
 @mcp.tool()
+@observe(name="create_k8s_manifest")
 def create_k8s_manifest(
     app_name: str,
     replicas: int = 2,
@@ -1405,6 +1424,7 @@ def create_k8s_manifest(
 
 
 @mcp.tool()
+@observe(name="scaffold_rag")
 def scaffold_rag(
     name: str,
     vectordb: str = "chromadb",
@@ -1429,6 +1449,7 @@ def scaffold_rag(
 
 
 @mcp.tool()
+@observe(name="scaffold_mcp_server")
 def scaffold_mcp_server(
     name: str,
     tools: list[str],
@@ -1450,6 +1471,7 @@ def scaffold_mcp_server(
 
 
 @mcp.tool()
+@observe(name="generate_commit_message")
 def generate_commit_message(
     changes_summary: str,
     change_type: str = "feat",
@@ -1474,6 +1496,7 @@ def generate_commit_message(
 
 
 @mcp.tool()
+@observe(name="lookup_docs")
 def lookup_docs(library: str, topic: str | None = None) -> dict[str, Any]:
     """Look up documentation for a library or tool.
 
@@ -1578,6 +1601,7 @@ def create_swarm(
 
 
 @mcp.tool()
+@observe(name="list_swarms")
 def list_swarms(active_only: bool = True) -> dict[str, Any]:
     """List all swarms.
 
@@ -1610,6 +1634,7 @@ def list_swarms(active_only: bool = True) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="get_swarm")
 def get_swarm(swarm_id: str) -> dict[str, Any]:
     """Get detailed information about a swarm.
 
@@ -1635,6 +1660,7 @@ def get_swarm(swarm_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="delete_swarm")
 def delete_swarm(swarm_id: str, force: bool = False) -> dict[str, Any]:
     """Delete or deactivate a swarm.
 
@@ -1674,6 +1700,7 @@ def delete_swarm(swarm_id: str, force: bool = False) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="get_swarm_delegation")
 def get_swarm_delegation(
     swarm_id: str,
     from_agent: str,
@@ -1925,6 +1952,7 @@ def create_session_from_swarm(
 
 
 @mcp.tool()
+@observe(name="get_session_info")
 def get_session_info(session_id: str) -> dict[str, Any]:
     """Get detailed information about a session.
 
@@ -1950,6 +1978,7 @@ def get_session_info(session_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="list_sessions_tool")
 def list_sessions_tool(
     status: str | None = None,
     active_only: bool = False,
@@ -2076,6 +2105,7 @@ def resume_session(session_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="cancel_session")
 def cancel_session(session_id: str) -> dict[str, Any]:
     """Cancel a session.
 
@@ -2155,6 +2185,7 @@ def add_session_task(
 
 
 @mcp.tool()
+@observe(name="start_session_task")
 def start_session_task(session_id: str, task_id: str) -> dict[str, Any]:
     """Mark a session task as in progress.
 
@@ -2233,6 +2264,7 @@ def complete_session_task(
 
 
 @mcp.tool()
+@observe(name="get_session_progress")
 def get_session_progress(session_id: str) -> dict[str, Any]:
     """Get detailed progress information for a session.
 
@@ -2258,6 +2290,7 @@ def get_session_progress(session_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="delete_session_tool")
 def delete_session_tool(session_id: str) -> dict[str, Any]:
     """Delete a session.
 
@@ -2291,6 +2324,7 @@ def delete_session_tool(session_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="list_hooks")
 def list_hooks(
     hook_type: str | None = None,
     enabled_only: bool = False,
@@ -2341,6 +2375,7 @@ def list_hooks(
 
 
 @mcp.tool()
+@observe(name="get_hook_info")
 def get_hook_info(name: str) -> dict[str, Any]:
     """Get detailed information about a hook.
 
@@ -2366,6 +2401,7 @@ def get_hook_info(name: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="enable_hook")
 def enable_hook(name: str) -> dict[str, Any]:
     """Enable a disabled hook.
 
@@ -2392,6 +2428,7 @@ def enable_hook(name: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="disable_hook")
 def disable_hook(name: str) -> dict[str, Any]:
     """Disable a hook without removing it.
 
@@ -2420,6 +2457,7 @@ def disable_hook(name: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="unregister_hook")
 def unregister_hook(name: str) -> dict[str, Any]:
     """Unregister and remove a hook.
 
@@ -2445,6 +2483,7 @@ def unregister_hook(name: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="get_hooks_stats")
 def get_hooks_stats() -> dict[str, Any]:
     """Get hooks system statistics.
 
@@ -2463,6 +2502,7 @@ def get_hooks_stats() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="clear_hooks")
 def clear_hooks(hook_type: str | None = None) -> dict[str, Any]:
     """Clear registered hooks.
 
@@ -2497,6 +2537,7 @@ def clear_hooks(hook_type: str | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="list_hook_types")
 def list_hook_types() -> dict[str, Any]:
     """List all available hook types with descriptions.
 
@@ -2699,6 +2740,7 @@ def semantic_store_batch(
 
 
 @mcp.tool()
+@observe(name="semantic_stats")
 def semantic_stats() -> dict[str, Any]:
     """Get semantic memory statistics.
 
@@ -2734,6 +2776,7 @@ def semantic_stats() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="semantic_reindex")
 def semantic_reindex() -> dict[str, Any]:
     """Regenerate embeddings for all memories.
 
@@ -2768,6 +2811,7 @@ def semantic_reindex() -> dict[str, Any]:
 
 
 @mcp.tool()
+@observe(name="semantic_delete")
 def semantic_delete(key: str) -> dict[str, Any]:
     """Delete a memory and its embedding.
 
