@@ -422,20 +422,27 @@ tool = StructuredTool.from_function(
 
 ## Best Practices
 
-### Do
+### Always
 - Define clear agent roles and goals
 - Use explicit state management
-- Implement proper error handling
+- Implement proper error handling with retries
 - Add human-in-the-loop for critical decisions
-- Set maximum iterations to prevent loops
+- Set maximum iterations to prevent infinite loops
 - Use appropriate memory for context length
+- Define clear stopping conditions for every agent
+- Use thread-safe state management between agents
+- Validate all tool outputs before using them
+- Monitor and enforce token limits in conversations
+- Make agent behaviors configurable (not hardcoded)
 
-### Don't
-- Create agents without clear stopping conditions
-- Share mutable state unsafely between agents
-- Skip validation of tool outputs
-- Ignore token limits in conversations
-- Hardcode agent behaviors (use configuration)
+### Step-by-Step Agent Design
+
+For complex multi-agent tasks, think through:
+1. "What distinct roles are needed and what are their responsibilities?"
+2. "What is the communication pattern between agents?"
+3. "What state needs to be shared and how is it synchronized?"
+4. "What are the stopping conditions for each agent?"
+5. "Where should humans be able to intervene?"
 
 ---
 

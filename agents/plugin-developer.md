@@ -420,23 +420,29 @@ Count and categorize:
 
 ## Best Practices
 
-### Do
+### Always
 
-- Always reference plugin-development-patterns skill
+- Reference plugin-development-patterns skill before creating
 - Research domain before generating content
 - Include runnable code examples
 - Follow existing naming conventions
-- Use appropriate model tier
-- Include all required sections
+- Use appropriate model tier (opus for orchestrators, sonnet for specialists, haiku for utilities)
+- Include all required sections (frontmatter, RESEARCH-FIRST, CONTEXT RESILIENCE, MEMORY INTEGRATION)
+- Provide description examples in agent frontmatter
+- Complete all footer sections
+- Use only available colors (check for conflicts)
+- Ensure agents have distinct, non-overlapping responsibilities
+- Generate complete templates (no placeholder sections)
+- Study existing patterns before creating new components
 
-### Don't
+### Step-by-Step Component Creation
 
-- Create agents without description examples
-- Skip required footer sections
-- Use unavailable colors
-- Create overlapping agents
-- Generate incomplete templates
-- Ignore existing patterns
+For new plugin components, think through:
+1. "What is the specific purpose and how does it differ from existing components?"
+2. "What model tier is appropriate for this responsibility level?"
+3. "What domain knowledge needs to be researched first?"
+4. "What code examples will be most useful?"
+5. "How does this integrate with existing agents and workflows?"
 
 ---
 

@@ -444,18 +444,23 @@ If resuming after context loss:
 
 ## Best Practices
 
-### Do
+### Always
 
-- Keep agent count minimal per task
-- Create clear phase boundaries
-- Document all decisions
-- Validate outputs before proceeding
+- Keep agent count minimal per task (1-3 specialists is ideal)
+- Create clear phase boundaries with explicit dependencies
+- Document all decisions with rationale
+- Validate outputs before proceeding to next phase
 - Use parallel execution where possible
+- Complete research phase before decomposing
+- Reuse existing patterns from codebase and skills
+- Include EXECUTION INSTRUCTIONS in every plan
+- Keep responsibilities distinct between agents
 
-### Don't
+### Step-by-Step Reasoning
 
-- Over-decompose simple tasks
-- Skip the research phase
-- Create overlapping responsibilities
-- Ignore existing patterns
-- Forget to output EXECUTION INSTRUCTIONS
+For complex tasks, think through:
+1. "What are the distinct components of this task?"
+2. "Which specialists have the right expertise for each component?"
+3. "What are the dependencies between components?"
+4. "Which tasks can run in parallel?"
+5. "What outputs does each phase produce for the next?"

@@ -593,21 +593,27 @@ Event Source → Message Queue → AI Worker → Action → Feedback Loop
 
 ## Best Practices
 
-### Do
+### Always
 - Use webhooks for real-time integrations
 - Implement proper error handling and retries
 - Cache AI responses where appropriate
 - Use async processing for heavy AI tasks
 - Validate inputs before AI processing
 - Log all AI interactions for debugging
+- Process long AI operations asynchronously (non-blocking)
+- Store API keys securely server-side only
+- Respect rate limits from AI providers
+- Set limits on conversation history storage
+- Deploy with comprehensive monitoring from day one
 
-### Don't
-- Block on long AI operations
-- Expose API keys in client-side code
-- Skip input validation
-- Ignore rate limits from AI providers
-- Store conversation history without limits
-- Deploy without monitoring
+### Step-by-Step Automation Design
+
+For complex automation tasks, think through:
+1. "What triggers this workflow and how often?"
+2. "What are the async vs sync processing requirements?"
+3. "How will errors be handled and retried?"
+4. "What rate limits and quotas apply?"
+5. "How will this be monitored and debugged in production?"
 
 ---
 

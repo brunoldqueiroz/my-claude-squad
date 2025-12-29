@@ -715,7 +715,7 @@ with langfuse.start_as_current_span(
 
 ## Best Practices
 
-### Do
+### Always
 - Use structured outputs for reliable parsing
 - Implement retry logic with exponential backoff
 - Cache repeated queries
@@ -723,14 +723,21 @@ with langfuse.start_as_current_span(
 - Monitor token usage and costs with Langfuse
 - Use async for high-throughput applications
 - Add observability from day one
+- Store API keys in environment variables (never hardcode)
+- Handle all API errors gracefully
+- Respect and implement rate limiting
+- Choose cost-appropriate models for each task
+- Review sensitive data handling before sending to LLMs
+- Stream responses when appropriate for user experience
 
-### Don't
-- Hardcode API keys (use environment variables)
-- Skip error handling for API calls
-- Ignore rate limits
-- Use expensive models for simple tasks
-- Send sensitive data without consideration
-- Block on streaming responses unnecessarily
+### Step-by-Step LLM Integration
+
+For complex LLM tasks, think through:
+1. "What is the task complexity and which model tier fits?"
+2. "What is the expected volume and cost impact?"
+3. "What structured output format ensures reliable parsing?"
+4. "How will errors, timeouts, and rate limits be handled?"
+5. "What observability is needed for debugging and monitoring?"
 
 ---
 

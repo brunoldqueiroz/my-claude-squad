@@ -2,11 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with this repository.
 
+## Quick Commands
+
+```bash
+# List all agents
+ls agents/
+
+# Use an agent (copy to clipboard)
+cat agents/python-developer.md | xclip -selection clipboard
+
+# Search agents by keyword
+grep -l "spark" agents/*.md
+```
+
 ## Project Overview
 
 A collection of **AI agent prompt templates**, **skills**, and **commands** for use with Claude Code and other LLMs.
 
 No custom code - just reusable prompts and knowledge bases.
+
+## Architecture
+
+This is a **prompt library**, not a code project. All value is in the markdown templates:
+- Agents define specialist personas with domain expertise
+- Skills provide reusable knowledge patterns
+- Commands offer task-specific templates
 
 ## Directory Structure
 
@@ -79,23 +99,34 @@ Command templates in `commands/*/`:
 
 ## Recommended MCP Servers
 
-For memory and persistence, use off-the-shelf MCP servers:
+### Currently Configured (this project)
 
-### Anthropic Memory MCP (recommended)
+| Server | Purpose | Key Tools |
+|--------|---------|-----------|
+| **memory** | Knowledge graph storage | `create_entities`, `search_nodes`, `read_graph` |
+| **playwright** | Browser automation | Screenshots, visual testing, web scraping |
+| **thinking** | Step-by-step reasoning | Reflective problem-solving |
+| **git** | Git operations | Deep history search, manipulation |
+| **qdrant** | Vector search | Semantic similarity (requires Qdrant server) |
+| **context7** | Library docs | Up-to-date documentation lookup |
+| **exa** | Web search | Code context, research |
+
+### Installation Commands
 ```bash
-claude mcp add memory npx -y @modelcontextprotocol/server-memory
-```
+# Memory (knowledge graph)
+claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
 
-Provides:
-- `create_entities` - Store knowledge
-- `create_relations` - Link entities
-- `search_nodes` - Query knowledge graph
-- `read_graph` - Get full graph
+# Browser automation
+claude mcp add playwright -- npx -y @anthropic-ai/mcp-server-playwright
 
-### Vector Search (optional)
-```bash
-# Qdrant for semantic search
-claude mcp add qdrant uvx mcp-server-qdrant
+# Step-by-step reasoning
+claude mcp add thinking -- npx -y @anthropic-ai/mcp-server-sequential-thinking
+
+# Git operations
+claude mcp add git -- npx -y @modelcontextprotocol/server-git
+
+# Vector search (requires running Qdrant server)
+claude mcp add qdrant -- uvx mcp-server-qdrant
 ```
 
 ## Agent Prompt Format
@@ -131,7 +162,35 @@ All agents should verify knowledge before acting:
 2. Use Exa MCP for code examples
 3. Declare uncertainty explicitly when unsure
 
+## Prompt Engineering Techniques Used
+
+The agents in this library apply these proven techniques:
+
+| Technique | Description | Where Applied |
+|-----------|-------------|---------------|
+| **Chain-of-Thought** | Step-by-step reasoning triggers | Complex specialists |
+| **Persona/Role** | Consistent expert identity | All agents |
+| **Few-shot Examples** | Example interactions in frontmatter | All agents |
+| **Knowledge Enrichment** | Research-first protocol | All agents |
+| **Positive Guidance** | "Always do X" vs "Don't do Y" | Critical rules |
+| **Context Resilience** | Recovery protocols for long sessions | All agents |
+
+## Workflow Best Practices
+
+### Recommended: Explore → Plan → Code → Commit
+1. Ask Claude to explore relevant files first
+2. Use "think hard" for complex reasoning
+3. Request a written plan before implementation
+4. Implement iteratively with verification
+5. Commit with descriptive messages
+
+### Context Management
+- Use `/clear` between unrelated tasks
+- Reference files via tab-completion
+- Pipe large inputs: `cat data.json | claude`
+
 ## Version History
 
+- **v0.3.0** - Enhanced with prompt engineering best practices, additional MCP servers
 - **v0.2.0** - Simplified to prompt templates only (removed custom MCP orchestrator)
 - **v0.1.0** - Custom MCP orchestrator with 64 tools (archived as `v0.1.0-custom-orchestrator` tag)

@@ -428,20 +428,25 @@ evaluate([test_case], [faithfulness, relevancy])
 
 ## Best Practices
 
-### Do
+### Always
 - Use hybrid search (vector + keyword) for better recall
 - Implement reranking for precision
 - Add metadata for filtering
-- Use chunking overlap to preserve context
-- Evaluate with multiple metrics
+- Use chunking overlap to preserve context at boundaries
+- Evaluate with multiple metrics (faithfulness, relevancy, precision, recall)
 - Cache embeddings for repeated queries
+- Tune chunk size appropriately (balance between context and specificity)
+- Keep context concise and relevant (avoid diluting with excess text)
+- Handle empty results gracefully with fallback responses
 
-### Don't
-- Skip chunking overlap (loses context at boundaries)
-- Use only semantic search (misses exact matches)
-- Ignore chunk size tuning (too large = noise, too small = fragmented)
-- Stuff too much context (dilutes relevance)
-- Forget to handle empty results
+### Step-by-Step RAG Implementation
+
+For complex RAG tasks, think through:
+1. "What is the document structure and how should it be chunked?"
+2. "What embedding model balances quality and cost for this use case?"
+3. "Should this use semantic-only, keyword-only, or hybrid search?"
+4. "What metadata will enable useful filtering?"
+5. "How will I evaluate and measure RAG quality?"
 
 ---
 
