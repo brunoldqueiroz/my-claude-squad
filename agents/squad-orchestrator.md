@@ -254,6 +254,145 @@ See `skills/self-improvement-patterns/SKILL.md` for:
 
 ---
 
+## Parallel Execution Strategy
+
+### How Claude Code Parallelism Works
+
+Claude Code executes sub-agents in parallel when **multiple Task tool calls are sent in a single message**. This is not automatic—you must structure your plan to enable it.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Single Message with Multiple Task Calls = PARALLEL         │
+│                                                              │
+│    Task(agent=A) ─┐                                          │
+│    Task(agent=B) ─┼─► All three run concurrently            │
+│    Task(agent=C) ─┘                                          │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  Separate Messages = SEQUENTIAL                              │
+│                                                              │
+│    Message 1: Task(agent=A) ──► Waits for completion        │
+│    Message 2: Task(agent=B) ──► Then runs                   │
+│    Message 3: Task(agent=C) ──► Then runs                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Independence Requirements
+
+Tasks can run in parallel **only if**:
+
+| Requirement | Example |
+|-------------|---------|
+| No shared file writes | Agent A writes `schema.sql`, Agent B writes `Dockerfile` ✓ |
+| No output dependencies | Agent B does NOT need Agent A's result to start ✓ |
+| No ordering constraints | The order of completion doesn't matter ✓ |
+
+### Parallel Execution Example
+
+**Scenario**: Deploy a Python ETL pipeline with containerization, SQL schema, and documentation.
+
+```markdown
+## Phase 1 (PARALLEL - Single Message)
+
+Launch these three agents simultaneously:
+
+| Agent | Task | Output |
+|-------|------|--------|
+| container-specialist | Create multi-stage Dockerfile | `/Dockerfile` |
+| sql-specialist | Design star schema for Snowflake | `/sql/schema.sql` |
+| documenter | Write deployment README | `/README.md` |
+
+**Execution**: Send ONE message with THREE Task tool calls.
+
+## Phase 2 (SEQUENTIAL - Waits for Phase 1)
+
+| Agent | Task | Dependencies |
+|-------|------|--------------|
+| python-developer | Write integration tests | Needs all Phase 1 outputs |
+
+**Execution**: Send AFTER Phase 1 completes.
+```
+
+### Visual Pattern
+
+```
+Phase 1 (parallel):              Phase 2 (sequential):
+┌──────────────────────┐
+│ container-specialist │──┐
+└──────────────────────┘  │
+┌──────────────────────┐  │      ┌──────────────────────┐
+│ sql-specialist       │──┼─────►│ python-developer     │
+└──────────────────────┘  │      └──────────────────────┘
+┌──────────────────────┐  │
+│ documenter           │──┘
+└──────────────────────┘
+     ONE message              Separate message (waits)
+```
+
+### Plan Output Format for Parallel Execution
+
+When creating execution plans, clearly mark parallel groups:
+
+```markdown
+## EXECUTION INSTRUCTIONS
+
+### PARALLEL GROUP 1 (send in single message)
+
+1. **INVOKE**: `container-specialist`
+   **TASK**: Create production Dockerfile
+   **PROMPT**: Read agents/container-specialist.md. Create multi-stage
+   Dockerfile for Python ETL in /src. Use non-root user, health checks.
+
+2. **INVOKE**: `sql-specialist`
+   **TASK**: Design target schema
+   **PROMPT**: Read agents/sql-specialist.md. Design star schema for
+   sales data. Target: Snowflake. Include SCD Type 2 dimensions.
+
+3. **INVOKE**: `documenter`
+   **TASK**: Write documentation
+   **PROMPT**: Read agents/documenter.md. Create README.md covering
+   setup, configuration, and deployment steps.
+
+### SEQUENTIAL (wait for Group 1)
+
+4. **INVOKE**: `python-developer`
+   **TASK**: Write integration tests
+   **DEPENDS ON**: Steps 1, 2, 3
+   **PROMPT**: Read agents/python-developer.md. Review Dockerfile,
+   schema.sql, and README. Write pytest tests verifying integration.
+```
+
+### Common Parallel Patterns
+
+| Pattern | Parallel Agents | Sequential Follow-up |
+|---------|-----------------|---------------------|
+| **Full-stack feature** | frontend + backend + db schema | integration tests |
+| **Data pipeline** | source extraction + target schema | ETL code |
+| **Containerized app** | Dockerfile + K8s manifests + docs | CI/CD pipeline |
+| **AI application** | RAG setup + LLM config + API design | integration |
+| **Multi-source ETL** | extractor A + extractor B + extractor C | transformer |
+
+### Background Execution Option
+
+For long-running agents, use `run_in_background: true`:
+
+```markdown
+### BACKGROUND EXECUTION
+
+1. **INVOKE**: `spark-specialist` (background)
+   **TASK**: Optimize large Spark job
+   **RUN IN BACKGROUND**: true
+
+2. **INVOKE**: `sql-specialist` (background)
+   **TASK**: Analyze query performance
+   **RUN IN BACKGROUND**: true
+
+3. **CHECK RESULTS**: Use TaskOutput to retrieve when needed
+```
+
+---
+
 ## Coordination Protocol
 
 ### CRITICAL: Subagent Constraint
