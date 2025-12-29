@@ -1,225 +1,83 @@
-# My Claude Squad
+# my-claude-squad
 
-A pure MCP-based multi-agent orchestration system with 17 specialized AI agents for Data Engineering, AI Engineering, and Plugin Development.
+A collection of **AI agent prompt templates**, **skills**, and **commands** for use with Claude Code and other LLMs.
 
-## Features
+## What's Included
 
-- **17 Specialized Agents** across 4 domains (Data Engineering, AI Engineering, Plugin Development, Orchestration)
-- **64 MCP Tools** for orchestration, scheduling, sessions, hooks, semantic memory, and more
-- **6 MCP Resources** for accessing agent, skill, and command definitions
-- **4 Swarm Topologies** (hierarchical, mesh, ring, star) for multi-agent coordination
-- **Persistent Sessions** with pause/resume support
-- **Semantic Memory** with vector search using sentence-transformers
-- **Task Dependencies** with DAG scheduling and circuit breaker patterns
+| Directory | Contents | Count |
+|-----------|----------|-------|
+| `agents/` | Specialist agent prompts | 17 |
+| `skills/` | Knowledge base templates | 10 |
+| `commands/` | Command templates | 30 |
 
 ## Quick Start
 
-```bash
-# Install dependencies
-uv sync
+### Using Agent Prompts
 
-# Register MCP server with Claude Code
-claude mcp add squad uv run squad-mcp
+1. **Copy-paste**: Copy the content of `agents/*.md` into your conversation
+2. **Reference**: Ask Claude to read an agent file:
+   > "Read agents/sql-specialist.md and help me optimize this query"
+3. **Custom instructions**: Add to your Claude Code settings
 
-# Start Claude Code
-claude
-```
-
-Then try:
-```
-You: What agents are available?
-→ Uses mcp__squad__list_agents
-
-You: Create a data pipeline from S3 to Snowflake with Airflow
-→ Uses mcp__squad__decompose_task to break into subtasks
-```
-
-## Architecture
-
-```
-my-claude-squad/
-├── orchestrator/           # MCP Server (Python/FastMCP)
-│   ├── server.py           # 64 MCP tools + 6 MCP resources
-│   ├── coordinator.py      # Task routing, decomposition
-│   ├── agent_registry.py   # Loads agents/*.md
-│   ├── memory.py           # DuckDB persistence
-│   ├── scheduler.py        # Task dependencies, CircuitBreaker
-│   ├── topology.py         # Swarm topologies
-│   ├── session.py          # Persistent sessions
-│   ├── hooks.py            # Pre/post operation hooks
-│   └── semantic_memory.py  # Vector embeddings
-├── agents/                 # 17 specialist agents (markdown)
-├── skills/                 # 10 knowledge skills
-├── commands/               # 30 command templates
-└── .swarm/                 # Persistent state (DuckDB)
-```
-
-## Agents
-
-### Orchestration
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| `squad-orchestrator` | opus | Complex task decomposition, multi-agent coordination |
-
-### Data Engineering
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| `python-developer` | sonnet | Python ETL, APIs, testing |
-| `sql-specialist` | sonnet | SQL queries, optimization, data modeling |
-| `spark-specialist` | sonnet | PySpark, Spark SQL, Delta Lake |
-| `snowflake-specialist` | sonnet | Snowflake platform |
-| `airflow-specialist` | sonnet | Airflow DAGs |
-| `aws-specialist` | sonnet | AWS cloud, data lakes |
-| `sql-server-specialist` | sonnet | T-SQL, SSIS |
-| `container-specialist` | sonnet | Docker, multi-stage builds |
-| `kubernetes-specialist` | sonnet | K8s, Helm |
-| `documenter` | sonnet | Technical documentation |
-| `git-commit-writer` | haiku | Conventional commits |
-
-### AI Engineering
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| `rag-specialist` | sonnet | RAG systems, vector databases |
-| `agent-framework-specialist` | sonnet | LangGraph, CrewAI, AutoGen |
-| `llm-specialist` | sonnet | LLM integration, prompts |
-| `automation-specialist` | sonnet | n8n, Dify, MCP servers |
-
-### Plugin Development
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| `plugin-developer` | sonnet | Create agents, skills, commands |
-
-## MCP Tools (64)
-
-| Category | Tools | Description |
-|----------|-------|-------------|
-| Agent Management | 5 | list_agents, route_task, spawn_agent, decompose_task, submit_decomposition |
-| Memory | 2 | memory_store, memory_query |
-| Storage | 2 | get_storage_stats, cleanup_storage |
-| Health & Status | 6 | swarm_status, complete_run, get_health, get_metrics, get_agent_health, set_agent_status |
-| Task Scheduling | 6 | create_dependent_task, get_task_graph, get_ready_tasks, complete_scheduled_task, execute_workflow, clear_workflow |
-| Events | 2 | get_events, emit_event |
-| Swarm Topology | 6 | create_swarm, list_swarms, get_swarm, delete_swarm, get_swarm_delegation, create_swarm_workflow |
-| Sessions | 12 | create_session, pause_session, resume_session, and more |
-| Hooks | 8 | list_hooks, enable_hook, disable_hook, and more |
-| Semantic Memory | 6 | semantic_store, semantic_search, semantic_stats, and more |
-| Commands | 9 | create_pipeline, analyze_query, create_dockerfile, scaffold_rag, and more |
-
-## MCP Resources (6)
-
-| URI | Description |
-|-----|-------------|
-| `squad://agents` | List all agents |
-| `squad://agents/{name}` | Get agent definition |
-| `squad://skills` | List all skills |
-| `squad://skills/{name}` | Get skill content |
-| `squad://commands` | List all commands |
-| `squad://commands/{cat}/{name}` | Get command content |
-
-## Swarm Topologies
-
-Create multi-agent swarms with different coordination patterns:
-
-| Topology | Pattern | Use Case |
-|----------|---------|----------|
-| **Hierarchical** | Queen-Worker | Central coordination |
-| **Mesh** | Peer-to-Peer | Democratic decisions |
-| **Ring** | Pipeline A→B→C | Sequential processing |
-| **Star** | Hub-Spoke | Specialized workers |
-
-```python
-# Example: Create a ring pipeline
-create_swarm(
-    name="ETL Pipeline",
-    topology="ring",
-    agents=["aws-specialist", "spark-specialist", "snowflake-specialist"]
-)
-```
-
-## Sessions
-
-Create persistent, resumable workflows:
-
-```python
-# Create session
-create_session(
-    name="Data Migration",
-    tasks=[
-        {"description": "Extract from S3", "agent_name": "aws-specialist"},
-        {"description": "Transform data", "agent_name": "spark-specialist"},
-        {"description": "Load to Snowflake", "agent_name": "snowflake-specialist"}
-    ]
-)
-
-# Pause/resume anytime
-pause_session(session_id)
-resume_session(session_id)
-```
-
-## Semantic Memory
-
-Store and search by meaning:
-
-```python
-# Store with embedding
-semantic_store("pattern1", "Use incremental loads for fact tables")
-
-# Search by meaning (not just keywords)
-semantic_search("how to load data efficiently")
-```
-
-Requires: `uv sync --extra semantic`
-
-## Installation
+### Example: Use the Python Developer
 
 ```bash
-# Clone
-git clone https://github.com/yourusername/my-claude-squad.git
-cd my-claude-squad
+# View the agent prompt
+cat agents/python-developer.md
 
-# Install
-uv sync
-
-# Optional: semantic memory support
-uv sync --extra semantic
-
-# Register with Claude Code
-claude mcp add squad uv run squad-mcp
+# Or ask Claude directly
+# "Read agents/python-developer.md and write a data processing script"
 ```
 
-## Testing
+## Available Agents
+
+| Agent | Specialty |
+|-------|-----------|
+| `spark-specialist` | PySpark, Spark SQL, Databricks, Delta Lake |
+| `python-developer` | Python ETL, APIs, testing, best practices |
+| `sql-specialist` | SQL optimization, CTEs, window functions |
+| `snowflake-specialist` | Snowflake streams, tasks, Snowpark |
+| `airflow-specialist` | DAGs, operators, sensors, scheduling |
+| `aws-specialist` | S3, Glue, Lambda, Athena, Redshift |
+| `sql-server-specialist` | T-SQL, SSIS, stored procedures |
+| `container-specialist` | Docker, multi-stage builds, optimization |
+| `kubernetes-specialist` | K8s manifests, Helm charts, operators |
+| `documenter` | READMEs, ADRs, technical documentation |
+| `git-commit-writer` | Conventional commit messages |
+| `rag-specialist` | RAG applications, vector databases |
+| `agent-framework-specialist` | LangGraph, CrewAI, AutoGen |
+| `automation-specialist` | n8n, Dify, MCP servers, chatbots |
+| `llm-specialist` | LLM integration, prompt engineering |
+| `plugin-developer` | Creating new agents, skills, commands |
+| `squad-orchestrator` | Multi-agent task coordination |
+
+## Recommended MCP Servers
+
+For memory and persistence, use off-the-shelf MCP servers instead of building custom:
+
+### Anthropic Memory MCP
 
 ```bash
-# Install dev dependencies
-uv sync --extra dev
-
-# Run tests
-uv run pytest
-
-# With coverage
-uv run pytest --cov=orchestrator --cov-report=html
+claude mcp add memory npx -y @modelcontextprotocol/server-memory
 ```
 
-## Documentation
+Provides knowledge graph storage with:
+- `create_entities` - Store knowledge
+- `create_relations` - Link entities
+- `search_nodes` - Query the graph
+- `read_graph` - Get full graph
 
-- [Installation Guide](docs/installation.md)
-- [Architecture](docs/architecture.md)
-- [Agent Catalog](docs/agents.md)
-- [API Reference](docs/api-reference.md)
-- [Developer Guide](docs/developer-guide.md)
-- [Tutorials](docs/tutorials/)
-
-## Environment Variables
+### Vector Search (Qdrant)
 
 ```bash
-# Optional: Langfuse observability
-LANGFUSE_SECRET_KEY=sk-lf-...
-LANGFUSE_PUBLIC_KEY=pk-lf-...
-LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
-
-# Optional: Custom path
-SQUAD_ROOT=/path/to/my-claude-squad
+# Optional: For semantic similarity search
+claude mcp add qdrant uvx mcp-server-qdrant
 ```
+
+## Version History
+
+- **v0.2.0** - Simplified to prompt templates (no custom code)
+- **v0.1.0** - Custom MCP orchestrator with 64 tools (see tag `v0.1.0-custom-orchestrator`)
 
 ## License
 
