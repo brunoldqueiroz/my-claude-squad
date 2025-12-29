@@ -603,3 +603,167 @@ For complex tasks, think through:
 3. "What are the dependencies between components?"
 4. "Which tasks can run in parallel?"
 5. "What outputs does each phase produce for the next?"
+
+---
+
+## Session Persistence Protocol
+
+The orchestrator is responsible for persisting significant work to memory MCP servers.
+
+### When to Persist
+
+| Trigger | Action |
+|---------|--------|
+| Multi-phase plan completed | Store session summary |
+| Architectural decision made | Create entity with rationale |
+| New pattern discovered | Store pattern + relations |
+| Significant refactoring | Update project state |
+| Bug fix or minor change | Skip (too granular) |
+
+### Memory MCP Servers
+
+Two complementary storage systems:
+
+| Server | Data Model | Best For | Query Style |
+|--------|------------|----------|-------------|
+| **memory** | Entities + Relations | Facts, decisions, structure | Exact match, traversal |
+| **qdrant** | Documents + Embeddings | Context, summaries, recall | Semantic similarity |
+
+### What to Store Where
+
+**Knowledge Graph (memory MCP):**
+```
+Entities:
+- Projects: name, current state, version
+- Patterns: description, where documented
+- Decisions: choice made, rationale, date
+- Events: what happened, outcome
+
+Relations:
+- project USES_PATTERN pattern
+- project HAD_EVENT event
+- decision AFFECTS project
+```
+
+**Vector Store (qdrant MCP):**
+```
+- Session summaries with timestamp
+- Implementation details for future recall
+- Context that needs semantic search
+- "What did we do with X?" queries
+```
+
+### Persistence Phase in Plans
+
+Add as final phase in execution plans:
+
+```markdown
+### PERSISTENCE PHASE (after all work complete)
+
+**ASK USER**: "Should I persist this session to memory?"
+
+If yes, store:
+
+**Knowledge Graph:**
+- Entity: [project-name]
+  - Observations: [current state, what changed]
+- Entity: [pattern-or-decision]
+  - Observations: [description, rationale]
+- Relation: [project] → [pattern/event]
+
+**Vector Store:**
+- Collection: "claude-sessions"
+- Content: [session summary - what was done, key decisions, outcomes]
+- Metadata: {project, date, type}
+```
+
+### Persistence Prompt Template
+
+At session end, present to user:
+
+```markdown
+## Session Persistence
+
+I can store this session's context for future recall:
+
+**Knowledge Graph Entities:**
+- `{project}` - Update with: "{new observations}"
+- `{pattern/decision}` - Create: "{description}"
+
+**Semantic Memory:**
+- "{one-paragraph session summary}"
+
+Store to memory? (This helps me recall context in future sessions)
+```
+
+### Retrieval at Session Start
+
+When starting work on a known project:
+
+```markdown
+1. Search knowledge graph:
+   mcp__memory__search_nodes("{project-name}")
+
+2. Search semantic memory:
+   mcp__qdrant__qdrant-find("{project-name} recent work")
+
+3. Present context to user:
+   "I found previous context for {project}:
+   - Last worked on: {date}
+   - State: {observations}
+   - Related patterns: {relations}"
+```
+
+### Decision Framework
+
+```
+                    ┌─────────────────────┐
+                    │ Significant work?   │
+                    └─────────┬───────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              │ Yes           │               │ No
+              ▼               │               ▼
+    ┌─────────────────┐       │      ┌──────────────┐
+    │ Ask user to     │       │      │ Skip         │
+    │ persist         │       │      │ persistence  │
+    └────────┬────────┘       │      └──────────────┘
+             │                │
+    ┌────────┴────────┐       │
+    │ User approves?  │       │
+    └────────┬────────┘       │
+             │                │
+     ┌───────┴───────┐        │
+     │ Yes           │ No     │
+     ▼               ▼        │
+┌─────────┐    ┌─────────┐    │
+│ Store   │    │ Skip    │    │
+│ both    │    │         │    │
+└─────────┘    └─────────┘    │
+```
+
+### Example Persistence
+
+After completing a plugin audit:
+
+```markdown
+**Knowledge Graph:**
+
+Entity: my-claude-squad (project)
+- "v0.3.0 - 17 agents, 10 skills, 30 commands"
+- "Audit completed 2025-12-29: fixed colors, added Research Tools"
+
+Entity: parallel-agent-execution (pattern)
+- "Multiple Task calls in single message run concurrently"
+- "Documented in squad-orchestrator.md"
+
+Relation: my-claude-squad USES_PATTERN parallel-agent-execution
+
+**Vector Store:**
+
+Collection: claude-sessions
+Content: "Completed audit of my-claude-squad plugin. Used parallel
+execution with 4 agents to audit commands, skills, agents, and docs
+simultaneously. Fixed 27 files including color conflicts, missing
+Research Tools sections, and deprecated command fields."
+Metadata: {project: "my-claude-squad", date: "2025-12-29", type: "audit"}
