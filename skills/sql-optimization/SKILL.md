@@ -248,3 +248,21 @@ ORDER BY avg_time DESC;
 4. **Update statistics** - Optimizer needs accurate info
 5. **Monitor query performance** - Track over time
 6. **Document optimizations** - Explain why for future maintainers
+
+---
+
+## Research Tools
+
+| Tool | Use For |
+|------|---------|
+| `mcp__upstash-context7-mcp__get-library-docs` | Database platform documentation |
+| `mcp__exa__get_code_context_exa` | SQL optimization patterns and examples |
+
+### Libraries to Always Verify
+
+| Platform | Reason |
+|----------|--------|
+| Snowflake | Query profile syntax, clustering keys |
+| PostgreSQL | EXPLAIN ANALYZE output format |
+| SQL Server | Execution plan operators, DMVs |
+| MySQL | Index hints, optimizer switches |

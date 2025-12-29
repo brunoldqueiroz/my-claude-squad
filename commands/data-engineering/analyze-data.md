@@ -1,10 +1,6 @@
 ---
 description: Profile and analyze a dataset for quality and patterns
 argument-hint: <file path or table name>
-allowed-tools:
-  - Read
-  - Bash
-  - Task
 ---
 
 # Analyze Data

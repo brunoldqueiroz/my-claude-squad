@@ -25,7 +25,7 @@ description: |
   <commentary>Agent with custom tool integration</commentary>
   </example>
 model: sonnet
-color: orange
+color: teal
 triggers:
   - multi-agent
   - multi agent

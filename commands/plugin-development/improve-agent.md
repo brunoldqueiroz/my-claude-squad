@@ -1,13 +1,6 @@
 ---
 description: Optimize a specific agent's prompt for better performance
 argument-hint: <agent-name>
-allowed-tools:
-  - Read
-  - Edit
-  - Grep
-  - Glob
-  - mcp__upstash-context7-mcp__get-library-docs
-  - mcp__exa__get_code_context_exa
 agent: squad-orchestrator
 ---
 

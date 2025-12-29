@@ -1,13 +1,6 @@
 ---
 description: Generate data pipeline boilerplate for ETL/ELT workflows
 argument-hint: <source> to <target> [options]
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Task
 ---
 
 # Create Pipeline

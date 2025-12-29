@@ -1,15 +1,6 @@
 ---
 description: Analyze and improve the task routing algorithm in coordinator.py
 argument-hint: <action (analyze|improve|add-keywords)>
-allowed-tools:
-  - Read
-  - Edit
-  - Grep
-  - Glob
-  - Bash
-  - mcp__squad__get_metrics
-  - mcp__squad__get_events
-  - mcp__squad__memory_query
 agent: squad-orchestrator
 ---
 

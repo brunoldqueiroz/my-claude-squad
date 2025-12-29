@@ -242,3 +242,21 @@ s3://data-lake/
 5. **Implement governance** - Catalog, lineage, access control
 6. **Plan for scale** - Design for 10x growth
 7. **Document architecture** - Diagrams and decision records
+
+---
+
+## Research Tools
+
+| Tool | Use For |
+|------|---------|
+| `mcp__upstash-context7-mcp__get-library-docs` | Terraform, AWS CDK, Pulumi docs |
+| `mcp__exa__get_code_context_exa` | Cloud architecture patterns |
+
+### Libraries to Always Verify
+
+| Library | Reason |
+|---------|--------|
+| Terraform | Provider versions, resource arguments |
+| AWS CDK | Construct APIs evolve rapidly |
+| Databricks | Unity Catalog features, workspace APIs |
+| Snowflake | Account-level vs database-level features |

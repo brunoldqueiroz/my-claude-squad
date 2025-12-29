@@ -58,7 +58,7 @@ For memory and persistence, use off-the-shelf MCP servers instead of building cu
 ### Anthropic Memory MCP
 
 ```bash
-claude mcp add memory npx -y @modelcontextprotocol/server-memory
+claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
 ```
 
 Provides knowledge graph storage with:
@@ -76,6 +76,7 @@ claude mcp add qdrant uvx mcp-server-qdrant
 
 ## Version History
 
+- **v0.3.0** - Enhanced with prompt engineering best practices, additional MCP servers
 - **v0.2.0** - Simplified to prompt templates (no custom code)
 - **v0.1.0** - Custom MCP orchestrator with 64 tools (see tag `v0.1.0-custom-orchestrator`)
 

@@ -210,3 +210,21 @@ Sensor (wait for data) → Process → Complete
 5. **Monitor and alert** - Know when things break
 6. **Document dependencies** - Understand relationships
 7. **Version control everything** - Code, configs, schemas
+
+---
+
+## Research Tools
+
+| Tool | Use For |
+|------|---------|
+| `mcp__upstash-context7-mcp__get-library-docs` | Airflow, dbt, Great Expectations docs |
+| `mcp__exa__get_code_context_exa` | ETL patterns and examples |
+
+### Libraries to Always Verify
+
+| Library | Reason |
+|---------|--------|
+| Apache Airflow | Operator APIs change between versions |
+| dbt | Macro syntax, configuration options |
+| Great Expectations | Expectation definitions, checkpoint config |
+| Prefect | Task/flow decorator changes |

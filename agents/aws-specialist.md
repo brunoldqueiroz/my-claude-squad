@@ -25,7 +25,7 @@ description: |
   <commentary>AWS serverless data processing</commentary>
   </example>
 model: sonnet
-color: orange
+color: brown
 triggers:
   - aws
   - s3

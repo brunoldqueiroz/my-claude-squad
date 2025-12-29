@@ -1,11 +1,6 @@
 ---
 description: Generate Kubernetes manifests for an application
 argument-hint: <application name> [options]
-allowed-tools:
-  - Read
-  - Write
-  - Glob
-  - Task
 ---
 
 # K8s Manifest

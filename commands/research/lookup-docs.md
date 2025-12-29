@@ -1,13 +1,6 @@
 ---
 description: Look up documentation for any library, framework, or tool using Context7 and Exa
 argument-hint: <library or topic>
-allowed-tools:
-  - mcp__upstash-context7-mcp__resolve-library-id
-  - mcp__upstash-context7-mcp__get-library-docs
-  - mcp__exa__get_code_context_exa
-  - mcp__exa__web_search_exa
-  - WebSearch
-  - WebFetch
 ---
 
 # Lookup Docs

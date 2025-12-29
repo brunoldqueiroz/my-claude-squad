@@ -1,13 +1,6 @@
 ---
 description: Generate deployment configuration for data applications
 argument-hint: <application> to <environment>
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Task
 ---
 
 # Deploy

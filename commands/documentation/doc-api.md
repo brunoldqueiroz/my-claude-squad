@@ -1,12 +1,6 @@
 ---
 description: Generate API documentation from code
 argument-hint: [api path or file]
-allowed-tools:
-  - Read
-  - Write
-  - Glob
-  - Grep
-  - Task
 ---
 
 # Document API

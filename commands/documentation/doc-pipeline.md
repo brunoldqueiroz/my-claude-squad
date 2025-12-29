@@ -1,12 +1,6 @@
 ---
 description: Generate comprehensive documentation for a data pipeline
 argument-hint: [pipeline path or name]
-allowed-tools:
-  - Read
-  - Write
-  - Glob
-  - Grep
-  - Task
 ---
 
 # Document Pipeline

@@ -1,14 +1,6 @@
 ---
 description: Execute a planned task using the assigned specialist agents
 argument-hint: [plan-reference or task]
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Bash
-  - Task
 ---
 
 # Execute Squad

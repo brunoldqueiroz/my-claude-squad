@@ -1,12 +1,6 @@
 ---
 description: Create optimized Dockerfile for a project
 argument-hint: [project path]
-allowed-tools:
-  - Read
-  - Write
-  - Glob
-  - Grep
-  - Task
 ---
 
 # Containerize

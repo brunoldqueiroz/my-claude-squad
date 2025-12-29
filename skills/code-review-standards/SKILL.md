@@ -391,3 +391,21 @@ Nice approach here! The use of [X] makes this really clean.
 4. **Learn from reviews** - Both giving and receiving
 5. **Use automation** - Linters, formatters, CI checks
 6. **Document decisions** - For future reference
+
+---
+
+## Research Tools
+
+| Tool | Use For |
+|------|---------|
+| `mcp__upstash-context7-mcp__get-library-docs` | Language/framework style guides |
+| `mcp__exa__get_code_context_exa` | Code review best practices |
+
+### Libraries to Always Verify
+
+| Library | Reason |
+|---------|--------|
+| ruff | Fast-evolving Python linter rules |
+| black | Formatting options, line length |
+| sqlfluff | SQL dialect rules, fix behavior |
+| prettier | Config file format, plugin APIs |

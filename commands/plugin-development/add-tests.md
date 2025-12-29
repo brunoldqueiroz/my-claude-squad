@@ -1,13 +1,6 @@
 ---
 description: Identify missing tests and add coverage for the orchestrator
 argument-hint: <scope (coverage|unit|integration|edge-cases)>
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Bash
 agent: squad-orchestrator
 ---
 

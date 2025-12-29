@@ -1,9 +1,5 @@
 ---
 description: Generate a conventional commit message for staged changes (NO AI attribution)
-allowed-tools:
-  - Bash
-  - Read
-  - Glob
 ---
 
 # Commit

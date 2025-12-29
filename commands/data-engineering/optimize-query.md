@@ -1,13 +1,6 @@
 ---
 description: Analyze and optimize SQL query performance
 argument-hint: [query or file path]
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Task
 ---
 
 # Optimize Query

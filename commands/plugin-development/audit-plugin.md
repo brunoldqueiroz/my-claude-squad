@@ -1,16 +1,6 @@
 ---
 description: Run a comprehensive audit of the my-claude-squad plugin
 argument-hint: <scope (quick|deep|specific-component)>
-allowed-tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash
-  - Write
-  - mcp__squad__get_metrics
-  - mcp__squad__get_events
-  - mcp__squad__get_agent_health
-  - mcp__squad__memory_query
 agent: squad-orchestrator
 ---
 

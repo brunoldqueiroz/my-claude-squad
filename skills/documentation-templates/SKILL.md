@@ -567,3 +567,21 @@ All errors follow this format:
 5. **Version documentation** - Track changes
 6. **Link related docs** - Easy navigation
 7. **Review regularly** - Keep accurate
+
+---
+
+## Research Tools
+
+| Tool | Use For |
+|------|---------|
+| `mcp__upstash-context7-mcp__get-library-docs` | Mermaid, MkDocs, Sphinx docs |
+| `mcp__exa__get_code_context_exa` | Documentation examples and patterns |
+
+### Libraries to Always Verify
+
+| Library | Reason |
+|---------|--------|
+| Mermaid | Diagram syntax updates |
+| MkDocs | Plugin configuration, theme options |
+| Sphinx | autodoc directives, extension APIs |
+| OpenAPI | Specification versions (3.0 vs 3.1) |

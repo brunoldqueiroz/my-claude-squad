@@ -486,3 +486,21 @@ def test_with_factory(order_factory):
 5. **Version test data** - Reproducible tests
 6. **Mock external dependencies** - Fast, reliable tests
 7. **Test recovery scenarios** - Failure handling
+
+---
+
+## Research Tools
+
+| Tool | Use For |
+|------|---------|
+| `mcp__upstash-context7-mcp__get-library-docs` | pytest, Great Expectations, dbt docs |
+| `mcp__exa__get_code_context_exa` | Testing patterns and examples |
+
+### Libraries to Always Verify
+
+| Library | Reason |
+|---------|--------|
+| pytest | Fixture scope, plugin APIs |
+| Great Expectations | Expectation syntax, checkpoint format |
+| dbt | Test macros, severity levels |
+| PySpark testing | DataFrame assertions, SparkSession fixtures |

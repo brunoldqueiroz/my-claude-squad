@@ -1,8 +1,5 @@
 ---
 description: Show current task status and agent progress
-allowed-tools:
-  - Read
-  - Glob
 ---
 
 # Status
