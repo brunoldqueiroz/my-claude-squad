@@ -53,25 +53,76 @@ cat agents/python-developer.md
 
 ## Recommended MCP Servers
 
-For memory and persistence, use off-the-shelf MCP servers instead of building custom:
+Enhance Claude Code with these MCP servers for memory, research, and productivity.
 
-### Anthropic Memory MCP
+### Hosted Services (HTTP)
+
+These require no local installation—just add the URL:
 
 ```bash
-claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
+# Web search and code context
+claude mcp add exa --transport http --url https://server.smithery.ai/exa/mcp
+
+# Library documentation lookup
+claude mcp add context7 --transport http --url https://server.smithery.ai/@upstash/context7-mcp/mcp
+
+# Notion integration
+claude mcp add notion --transport http --url https://server.smithery.ai/notion/mcp
+
+# Gmail integration
+claude mcp add gmail --transport http --url https://server.smithery.ai/gmail/mcp
 ```
 
-Provides knowledge graph storage with:
-- `create_entities` - Store knowledge
-- `create_relations` - Link entities
-- `search_nodes` - Query the graph
-- `read_graph` - Get full graph
+### Local Servers (stdio)
 
-### Vector Search (Qdrant)
+These run locally via npm/uvx:
 
 ```bash
-# Optional: For semantic similarity search
-claude mcp add qdrant uvx mcp-server-qdrant
+# Knowledge graph memory
+claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
+
+# Browser automation
+claude mcp add playwright -- npx -y @anthropic-ai/mcp-server-playwright
+
+# Step-by-step reasoning
+claude mcp add thinking -- npx -y @anthropic-ai/mcp-server-sequential-thinking
+
+# Git operations
+claude mcp add git -- npx -y @modelcontextprotocol/server-git
+
+# Vector search (requires Qdrant server running)
+claude mcp add qdrant -- uvx mcp-server-qdrant
+```
+
+### Server Capabilities
+
+| Server | Purpose | Key Tools |
+|--------|---------|-----------|
+| **exa** | Web search | `web_search_exa`, `get_code_context_exa` |
+| **context7** | Library docs | `resolve-library-id`, `get-library-docs` |
+| **notion** | Notion workspace | `notion-search`, `notion-fetch`, `notion-create-pages` |
+| **gmail** | Email management | `fetch_emails`, `send_email`, `search_people` |
+| **memory** | Knowledge graph | `create_entities`, `search_nodes`, `read_graph` |
+| **playwright** | Browser automation | Screenshots, navigation, form filling |
+| **thinking** | Reasoning | Step-by-step problem solving |
+| **git** | Git operations | Deep history search, commit analysis |
+| **qdrant** | Vector search | `qdrant-find`, `qdrant-store` |
+
+### Quick Install All
+
+```bash
+# Hosted services
+claude mcp add exa --transport http --url https://server.smithery.ai/exa/mcp
+claude mcp add context7 --transport http --url https://server.smithery.ai/@upstash/context7-mcp/mcp
+claude mcp add notion --transport http --url https://server.smithery.ai/notion/mcp
+claude mcp add gmail --transport http --url https://server.smithery.ai/gmail/mcp
+
+# Local servers
+claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
+claude mcp add playwright -- npx -y @anthropic-ai/mcp-server-playwright
+claude mcp add thinking -- npx -y @anthropic-ai/mcp-server-sequential-thinking
+claude mcp add git -- npx -y @modelcontextprotocol/server-git
+claude mcp add qdrant -- uvx mcp-server-qdrant
 ```
 
 ## Version History
