@@ -99,21 +99,32 @@ Command templates in `commands/*/`:
 
 ## Recommended MCP Servers
 
-### Currently Configured (this project)
+Enhance Claude Code with these MCP servers for memory, research, and productivity.
 
-| Server | Purpose | Key Tools |
-|--------|---------|-----------|
-| **memory** | Knowledge graph storage | `create_entities`, `search_nodes`, `read_graph` |
-| **playwright** | Browser automation | Screenshots, visual testing, web scraping |
-| **thinking** | Step-by-step reasoning | Reflective problem-solving |
-| **git** | Git operations | Deep history search, manipulation |
-| **qdrant** | Vector search | Semantic similarity (requires Qdrant server) |
-| **context7** | Library docs | Up-to-date documentation lookup |
-| **exa** | Web search | Code context, research |
+### Hosted Services (HTTP)
 
-### Installation Commands
+These require no local installation—just add the URL:
+
 ```bash
-# Memory (knowledge graph)
+# Web search and code context
+claude mcp add exa --transport http --url https://server.smithery.ai/exa/mcp
+
+# Library documentation lookup
+claude mcp add context7 --transport http --url https://server.smithery.ai/@upstash/context7-mcp/mcp
+
+# Notion integration
+claude mcp add notion --transport http --url https://server.smithery.ai/notion/mcp
+
+# Gmail integration
+claude mcp add gmail --transport http --url https://server.smithery.ai/gmail/mcp
+```
+
+### Local Servers (stdio)
+
+These run locally via npm/uvx:
+
+```bash
+# Knowledge graph memory
 claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
 
 # Browser automation
@@ -125,9 +136,23 @@ claude mcp add thinking -- npx -y @anthropic-ai/mcp-server-sequential-thinking
 # Git operations
 claude mcp add git -- npx -y @modelcontextprotocol/server-git
 
-# Vector search (requires running Qdrant server)
+# Vector search (requires Qdrant server running)
 claude mcp add qdrant -- uvx mcp-server-qdrant
 ```
+
+### Server Capabilities
+
+| Server | Purpose | Key Tools |
+|--------|---------|-----------|
+| **exa** | Web search | `web_search_exa`, `get_code_context_exa` |
+| **context7** | Library docs | `resolve-library-id`, `get-library-docs` |
+| **notion** | Notion workspace | `notion-search`, `notion-fetch`, `notion-create-pages` |
+| **gmail** | Email management | `fetch_emails`, `send_email`, `search_people` |
+| **memory** | Knowledge graph | `create_entities`, `search_nodes`, `read_graph` |
+| **playwright** | Browser automation | Screenshots, navigation, form filling |
+| **thinking** | Reasoning | Step-by-step problem solving |
+| **git** | Git operations | Deep history search, commit analysis |
+| **qdrant** | Vector search | `qdrant-find`, `qdrant-store` |
 
 ## Agent Prompt Format
 
