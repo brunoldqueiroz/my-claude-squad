@@ -5,11 +5,11 @@ Logs tool calls and sessions to Langfuse for observability.
 Reads hook data from stdin and sends traces to Langfuse.
 
 Setup:
-1. Install: pip install langfuse
-2. Set environment variables:
-   - LANGFUSE_PUBLIC_KEY
-   - LANGFUSE_SECRET_KEY
-   - LANGFUSE_HOST (optional, defaults to https://cloud.langfuse.com)
+1. Install: pip install langfuse python-dotenv
+2. Create .env file with:
+   - LANGFUSE_PUBLIC_KEY=pk-lf-xxx
+   - LANGFUSE_SECRET_KEY=sk-lf-xxx
+   - LANGFUSE_HOST=https://cloud.langfuse.com (optional)
 
 Usage in Claude Code hooks (settings.json):
 {
@@ -29,6 +29,29 @@ import json
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
+
+# Load .env file from script directory or project root
+def load_dotenv():
+    """Load environment variables from .env file."""
+    try:
+        from dotenv import load_dotenv as _load_dotenv
+
+        # Try script directory first, then parent (project root)
+        script_dir = Path(__file__).parent
+        env_paths = [
+            script_dir / ".env",
+            script_dir.parent / ".env",
+        ]
+
+        for env_path in env_paths:
+            if env_path.exists():
+                _load_dotenv(env_path)
+                return
+    except ImportError:
+        pass  # python-dotenv not installed, rely on environment variables
+
+load_dotenv()
 
 # Session trace cache (per-process, resets on script restart)
 _session_traces = {}
@@ -49,10 +72,11 @@ def get_langfuse_client():
         print("Error: LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY must be set", file=sys.stderr)
         sys.exit(1)
 
+    host = os.environ.get("LANGFUSE_HOST", "") or "https://cloud.langfuse.com"
     return Langfuse(
         public_key=public_key,
         secret_key=secret_key,
-        host=os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+        host=host,
     )
 
 
@@ -64,48 +88,46 @@ def log_tool_use(langfuse, hook_data: dict) -> None:
     tool_response = hook_data.get("tool_response", {})
     tool_use_id = hook_data.get("tool_use_id", "")
 
-    # Create or get trace for this session
-    trace = langfuse.trace(
-        id=session_id,
-        name=f"claude-code-session",
-        session_id=session_id,
+    # Create a span for this tool call
+    span = langfuse.start_span(
+        name=f"tool:{tool_name}",
+        input=tool_input,
         metadata={
+            "tool_use_id": tool_use_id,
+            "hook_event": "PostToolUse",
             "cwd": hook_data.get("cwd", ""),
             "permission_mode": hook_data.get("permission_mode", ""),
         },
     )
 
-    # Log the tool call as a span
-    trace.span(
-        name=tool_name,
-        input=tool_input,
-        output=tool_response,
-        metadata={
-            "tool_use_id": tool_use_id,
-            "hook_event": "PostToolUse",
-        },
+    # Update with output and end
+    span.update(output=tool_response)
+    span.update_trace(
+        name="claude-code-session",
+        session_id=session_id,
     )
+    span.end()
 
 
 def log_session_end(langfuse, hook_data: dict) -> None:
     """Log session end to Langfuse."""
     session_id = hook_data.get("session_id", "unknown")
 
-    # Update the trace to mark session complete
-    trace = langfuse.trace(
-        id=session_id,
-        name=f"claude-code-session",
-        session_id=session_id,
+    # Create a span to mark session complete
+    span = langfuse.start_span(
+        name="session_end",
         metadata={
-            "cwd": hook_data.get("cwd", ""),
+            "hook_event": "Stop",
             "completed_at": datetime.now().isoformat(),
         },
     )
 
-    trace.span(
-        name="session_end",
-        metadata={"hook_event": "Stop"},
+    span.update_trace(
+        name="claude-code-session",
+        session_id=session_id,
+        metadata={"cwd": hook_data.get("cwd", "")},
     )
+    span.end()
 
 
 def main():
