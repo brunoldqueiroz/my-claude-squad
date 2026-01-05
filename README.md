@@ -92,10 +92,42 @@ These require local setup:
 ```bash
 # Vector search (requires Qdrant server running)
 claude mcp add qdrant -- uvx mcp-server-qdrant
-
-# Langfuse observability (usage analytics, cost tracking)
-claude mcp add langfuse -- npx -y shouting-mcp-langfuse
 ```
+
+### Langfuse Platform MCP (Observability)
+
+Langfuse provides LLM observability with usage analytics, cost tracking, and prompt management.
+
+**1. Get API Keys:**
+- Sign up at [cloud.langfuse.com](https://cloud.langfuse.com)
+- Create a project → Settings → API Keys
+- Copy your Public Key and Secret Key
+
+**2. Generate auth token:**
+```bash
+# Create base64 auth token (replace with your keys)
+echo -n "pk-lf-xxx:sk-lf-xxx" | base64
+```
+
+**3. Add MCP server:**
+```bash
+# EU region
+claude mcp add langfuse \
+  --transport http \
+  --url https://cloud.langfuse.com/api/public/mcp \
+  --header "Authorization: Basic YOUR_BASE64_TOKEN"
+
+# US region
+claude mcp add langfuse \
+  --transport http \
+  --url https://us.cloud.langfuse.com/api/public/mcp \
+  --header "Authorization: Basic YOUR_BASE64_TOKEN"
+```
+
+**Available tools:**
+- `get_prompt` - Fetch prompts from Langfuse prompt management
+- `list_prompts` - List all prompts in your project
+- `get_prompt_versions` - Get version history of a prompt
 
 ### Server Capabilities
 
@@ -110,7 +142,7 @@ claude mcp add langfuse -- npx -y shouting-mcp-langfuse
 | **thinking** | Reasoning | Step-by-step problem solving |
 | **git** | Git operations | Deep history search, commit analysis |
 | **qdrant** | Vector search | `qdrant-find`, `qdrant-store` |
-| **langfuse** | Observability | `get-project-overview`, `get-usage-by-model`, `get-daily-metrics` |
+| **langfuse** | Prompt management | `get_prompt`, `list_prompts`, `get_prompt_versions` |
 
 ### Quick Install All
 
@@ -127,8 +159,59 @@ claude mcp add git --transport http --url https://server.smithery.ai/@anthropic/
 
 # Local servers
 claude mcp add qdrant -- uvx mcp-server-qdrant
-claude mcp add langfuse -- npx -y shouting-mcp-langfuse
+
+# Langfuse (see "Langfuse Platform MCP" section for setup)
 ```
+
+## Session Logging with Langfuse Hooks
+
+Log all Claude Code tool calls to Langfuse for full session observability.
+
+**1. Install dependencies:**
+```bash
+uv sync --extra observability
+# or: pip install langfuse
+```
+
+**2. Set environment variables:**
+```bash
+export LANGFUSE_PUBLIC_KEY="pk-lf-xxx"
+export LANGFUSE_SECRET_KEY="sk-lf-xxx"
+export LANGFUSE_HOST="https://cloud.langfuse.com"  # or us.cloud.langfuse.com
+```
+
+**3. Configure hooks in Claude Code:**
+
+Add to `~/.claude/settings.json` (user) or `.claude/settings.json` (project):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "python /path/to/my-claude-squad/scripts/langfuse_hook.py"
+      }]
+    }],
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "python /path/to/my-claude-squad/scripts/langfuse_hook.py"
+      }]
+    }]
+  }
+}
+```
+
+**What gets logged:**
+- Every tool call (Read, Write, Bash, etc.) with inputs/outputs
+- Session boundaries (start/end)
+- Grouped by session ID for trace visualization
+
+**View in Langfuse:**
+- Go to [cloud.langfuse.com](https://cloud.langfuse.com) → Traces
+- Each session appears as a trace with tool calls as spans
 
 ## Token Usage Monitoring
 

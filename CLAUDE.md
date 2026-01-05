@@ -133,14 +133,24 @@ claude mcp add git --transport http --url https://server.smithery.ai/@anthropic/
 
 ### Local Servers (stdio)
 
-These require local setup:
-
 ```bash
 # Vector search (requires Qdrant server running)
 claude mcp add qdrant -- uvx mcp-server-qdrant
+```
 
-# Langfuse observability (usage analytics, cost tracking)
-claude mcp add langfuse -- npx -y shouting-mcp-langfuse
+### Langfuse Platform MCP (Observability)
+
+See README.md for full setup. Quick start:
+
+```bash
+# Generate auth token
+echo -n "pk-lf-xxx:sk-lf-xxx" | base64
+
+# Add MCP (EU region)
+claude mcp add langfuse \
+  --transport http \
+  --url https://cloud.langfuse.com/api/public/mcp \
+  --header "Authorization: Basic YOUR_BASE64_TOKEN"
 ```
 
 ### Server Capabilities
@@ -156,7 +166,33 @@ claude mcp add langfuse -- npx -y shouting-mcp-langfuse
 | **thinking** | Reasoning | Step-by-step problem solving |
 | **git** | Git operations | Deep history search, commit analysis |
 | **qdrant** | Vector search | `qdrant-find`, `qdrant-store` |
-| **langfuse** | Observability | `get-project-overview`, `get-usage-by-model`, `get-daily-metrics` |
+| **langfuse** | Prompt management | `get_prompt`, `list_prompts`, `get_prompt_versions` |
+
+## Session Logging with Langfuse Hooks
+
+Log tool calls to Langfuse for observability. See README.md for full setup.
+
+```bash
+# Install
+uv sync --extra observability
+
+# Set credentials
+export LANGFUSE_PUBLIC_KEY="pk-lf-xxx"
+export LANGFUSE_SECRET_KEY="sk-lf-xxx"
+```
+
+Configure hooks in `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "*",
+      "hooks": [{"type": "command", "command": "python scripts/langfuse_hook.py"}]
+    }]
+  }
+}
+```
 
 ## Agent Prompt Format
 
