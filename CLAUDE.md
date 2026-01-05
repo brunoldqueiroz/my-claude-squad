@@ -101,9 +101,9 @@ Command templates in `commands/*/`:
 
 Enhance Claude Code with these MCP servers for memory, research, and productivity.
 
-### Hosted Services (HTTP)
+### Smithery Hosted (HTTP)
 
-These require no local installation—just add the URL:
+No local installation required—just add the URL:
 
 ```bash
 # Web search and code context
@@ -117,27 +117,30 @@ claude mcp add notion --transport http --url https://server.smithery.ai/notion/m
 
 # Gmail integration
 claude mcp add gmail --transport http --url https://server.smithery.ai/gmail/mcp
+
+# Knowledge graph memory
+claude mcp add memory --transport http --url https://server.smithery.ai/@anthropic/memory/mcp
+
+# Browser automation (Cloudflare Playwright)
+claude mcp add playwright --transport http --url https://server.smithery.ai/@cloudflare/playwright-mcp/mcp
+
+# Step-by-step reasoning
+claude mcp add thinking --transport http --url https://server.smithery.ai/@anthropic/sequential-thinking/mcp
+
+# Git operations
+claude mcp add git --transport http --url https://server.smithery.ai/@anthropic/git/mcp
 ```
 
 ### Local Servers (stdio)
 
-These run locally via npm/uvx:
+These require local setup:
 
 ```bash
-# Knowledge graph memory
-claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
-
-# Browser automation
-claude mcp add playwright -- npx -y @anthropic-ai/mcp-server-playwright
-
-# Step-by-step reasoning
-claude mcp add thinking -- npx -y @anthropic-ai/mcp-server-sequential-thinking
-
-# Git operations
-claude mcp add git -- npx -y @modelcontextprotocol/server-git
-
 # Vector search (requires Qdrant server running)
 claude mcp add qdrant -- uvx mcp-server-qdrant
+
+# Langfuse observability (usage analytics, cost tracking)
+claude mcp add langfuse -- npx -y shouting-mcp-langfuse
 ```
 
 ### Server Capabilities
@@ -153,6 +156,7 @@ claude mcp add qdrant -- uvx mcp-server-qdrant
 | **thinking** | Reasoning | Step-by-step problem solving |
 | **git** | Git operations | Deep history search, commit analysis |
 | **qdrant** | Vector search | `qdrant-find`, `qdrant-store` |
+| **langfuse** | Observability | `get-project-overview`, `get-usage-by-model`, `get-daily-metrics` |
 
 ## Agent Prompt Format
 

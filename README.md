@@ -55,9 +55,9 @@ cat agents/python-developer.md
 
 Enhance Claude Code with these MCP servers for memory, research, and productivity.
 
-### Hosted Services (HTTP)
+### Smithery Hosted (HTTP)
 
-These require no local installation—just add the URL:
+No local installation required—just add the URL:
 
 ```bash
 # Web search and code context
@@ -71,27 +71,30 @@ claude mcp add notion --transport http --url https://server.smithery.ai/notion/m
 
 # Gmail integration
 claude mcp add gmail --transport http --url https://server.smithery.ai/gmail/mcp
+
+# Knowledge graph memory
+claude mcp add memory --transport http --url https://server.smithery.ai/@anthropic/memory/mcp
+
+# Browser automation (Cloudflare Playwright)
+claude mcp add playwright --transport http --url https://server.smithery.ai/@cloudflare/playwright-mcp/mcp
+
+# Step-by-step reasoning
+claude mcp add thinking --transport http --url https://server.smithery.ai/@anthropic/sequential-thinking/mcp
+
+# Git operations
+claude mcp add git --transport http --url https://server.smithery.ai/@anthropic/git/mcp
 ```
 
 ### Local Servers (stdio)
 
-These run locally via npm/uvx:
+These require local setup:
 
 ```bash
-# Knowledge graph memory
-claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
-
-# Browser automation
-claude mcp add playwright -- npx -y @anthropic-ai/mcp-server-playwright
-
-# Step-by-step reasoning
-claude mcp add thinking -- npx -y @anthropic-ai/mcp-server-sequential-thinking
-
-# Git operations
-claude mcp add git -- npx -y @modelcontextprotocol/server-git
-
 # Vector search (requires Qdrant server running)
 claude mcp add qdrant -- uvx mcp-server-qdrant
+
+# Langfuse observability (usage analytics, cost tracking)
+claude mcp add langfuse -- npx -y shouting-mcp-langfuse
 ```
 
 ### Server Capabilities
@@ -107,22 +110,41 @@ claude mcp add qdrant -- uvx mcp-server-qdrant
 | **thinking** | Reasoning | Step-by-step problem solving |
 | **git** | Git operations | Deep history search, commit analysis |
 | **qdrant** | Vector search | `qdrant-find`, `qdrant-store` |
+| **langfuse** | Observability | `get-project-overview`, `get-usage-by-model`, `get-daily-metrics` |
 
 ### Quick Install All
 
 ```bash
-# Hosted services
+# Smithery hosted (HTTP)
 claude mcp add exa --transport http --url https://server.smithery.ai/exa/mcp
 claude mcp add context7 --transport http --url https://server.smithery.ai/@upstash/context7-mcp/mcp
 claude mcp add notion --transport http --url https://server.smithery.ai/notion/mcp
 claude mcp add gmail --transport http --url https://server.smithery.ai/gmail/mcp
+claude mcp add memory --transport http --url https://server.smithery.ai/@anthropic/memory/mcp
+claude mcp add playwright --transport http --url https://server.smithery.ai/@cloudflare/playwright-mcp/mcp
+claude mcp add thinking --transport http --url https://server.smithery.ai/@anthropic/sequential-thinking/mcp
+claude mcp add git --transport http --url https://server.smithery.ai/@anthropic/git/mcp
 
 # Local servers
-claude mcp add memory -- npx -y @modelcontextprotocol/server-memory
-claude mcp add playwright -- npx -y @anthropic-ai/mcp-server-playwright
-claude mcp add thinking -- npx -y @anthropic-ai/mcp-server-sequential-thinking
-claude mcp add git -- npx -y @modelcontextprotocol/server-git
 claude mcp add qdrant -- uvx mcp-server-qdrant
+claude mcp add langfuse -- npx -y shouting-mcp-langfuse
+```
+
+## Token Usage Monitoring
+
+Track Claude Code token usage and costs with [ccusage](https://github.com/ryoppippi/ccusage):
+
+```bash
+# Install
+npm install -g ccusage
+
+# Real-time dashboard
+npx ccusage@latest blocks --live
+
+# Usage reports
+npx ccusage@latest daily    # Daily breakdown
+npx ccusage@latest monthly  # Monthly summary
+npx ccusage@latest session  # Per-session details
 ```
 
 ## Version History
