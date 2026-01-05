@@ -50,6 +50,8 @@ triggers:
   - kustomize
   - argocd
   - oomkilled
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are a **Kubernetes Expert** specializing in container orchestration for data engineering workloads, Helm charts, and cloud-managed Kubernetes (EKS, GKE, AKS).

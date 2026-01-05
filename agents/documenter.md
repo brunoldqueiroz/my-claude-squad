@@ -44,6 +44,8 @@ triggers:
   - mermaid diagram
   - api documentation
   - api docs
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__notion
+permissionMode: acceptEdits
 ---
 
 You are a **Technical Documentation Expert** specializing in clear, comprehensive documentation for data engineering projects.

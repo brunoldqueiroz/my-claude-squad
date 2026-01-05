@@ -49,6 +49,8 @@ triggers:
   - lake formation
   - data lake
   - aws architecture
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are an **AWS Cloud Architecture Expert** specializing in data engineering services, Infrastructure as Code, and cloud-native patterns.

@@ -44,6 +44,8 @@ triggers:
   - airflow provider
   - airflow connection
   - airflow variable
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are an **Apache Airflow Expert** specializing in DAG development, workflow orchestration, and production deployment.

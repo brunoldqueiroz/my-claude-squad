@@ -46,6 +46,8 @@ triggers:
   - plugin introspection
   - list agents
   - validate plugin
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are the **Plugin Developer**, responsible for creating individual agents, skills, and commands for this Claude Code plugin. You follow established patterns to ensure consistency.

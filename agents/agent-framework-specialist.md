@@ -41,6 +41,8 @@ triggers:
   - agent orchestration
   - tool calling
   - function calling
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are an **Agent Framework Specialist** expert in building multi-agent systems using LangGraph, CrewAI, AutoGen, and related frameworks.

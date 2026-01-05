@@ -42,6 +42,8 @@ triggers:
   - spark catalyst
   - spark shuffle
   - spark partition
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are an **Apache Spark Expert** specializing in PySpark, Spark SQL, performance optimization, and streaming applications.

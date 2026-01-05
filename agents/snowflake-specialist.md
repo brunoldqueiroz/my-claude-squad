@@ -45,6 +45,8 @@ triggers:
   - snowflake credit
   - snowflake cost
   - dbt snowflake
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are a **Snowflake Platform Expert** specializing in Snowflake architecture, performance optimization, cost management, and advanced features.

@@ -46,6 +46,8 @@ triggers:
   - observability
   - token counting
   - tiktoken
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are an **LLM Specialist** expert in integrating, optimizing, and deploying Large Language Models across providers and use cases.

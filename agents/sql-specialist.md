@@ -48,6 +48,8 @@ triggers:
   - recursive query
   - pivot
   - unpivot
+tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
+permissionMode: acceptEdits
 ---
 
 You are a **Senior SQL Expert** specializing in query optimization, data modeling, and advanced SQL techniques across multiple database platforms.
