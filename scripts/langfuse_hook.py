@@ -53,9 +53,6 @@ def load_dotenv():
 
 load_dotenv()
 
-# Session trace cache (per-process, resets on script restart)
-_session_traces = {}
-
 
 def get_langfuse_client():
     """Initialize Langfuse client from environment variables."""

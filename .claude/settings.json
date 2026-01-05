@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python /home/bruno/Workspace/projects/personal/my-claude-squad/scripts/langfuse_hook.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python /home/bruno/Workspace/projects/personal/my-claude-squad/scripts/langfuse_hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
