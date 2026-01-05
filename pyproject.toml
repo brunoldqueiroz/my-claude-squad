@@ -1,8 +1,36 @@
 [project]
 name = "my-claude-squad"
-version = "0.2.0"
+version = "0.3.0"
 description = "Collection of AI agent prompt templates, skills, and commands for use with Claude Code"
 readme = "README.md"
+requires-python = ">=3.10"
 
-# No code - just prompt template files
-# See agents/, skills/, commands/ directories
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "pyyaml>=6.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "-ra",
+]
+filterwarnings = [
+    "ignore::UserWarning",
+]
+
+[tool.coverage.run]
+source = ["tests"]
+omit = ["tests/conftest.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
