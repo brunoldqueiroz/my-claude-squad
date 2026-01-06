@@ -1,49 +1,30 @@
 ---
 name: documenter
 description: |
-  Use this agent for technical documentation including READMEs, API docs, architecture decision records (ADRs), and data dictionaries.
+  Create technical documentation and diagrams. Use when:
+  - Writing READMEs for projects or packages
+  - Creating Architecture Decision Records (ADRs)
+  - Building data dictionaries and schema documentation
+  - Writing runbooks and operational playbooks
+  - Generating API documentation (OpenAPI, Swagger)
+  - Creating Mermaid diagrams for architecture
 
-  Examples:
   <example>
-  Context: User needs project documentation
   user: "Create a README for this data pipeline project"
-  assistant: "I'll use the documenter agent for README creation."
-  <commentary>Project documentation task</commentary>
+  assistant: "I'll create a comprehensive README with architecture diagram, setup, and usage."
   </example>
 
   <example>
-  Context: User needs API documentation
   user: "Document this FastAPI endpoint"
-  assistant: "I'll use the documenter agent for API documentation."
-  <commentary>API documentation generation</commentary>
+  assistant: "I'll generate OpenAPI documentation with request/response examples."
   </example>
 
   <example>
-  Context: User needs to document a decision
   user: "Create an ADR for choosing Snowflake over Redshift"
-  assistant: "I'll use the documenter agent for the architecture decision record."
-  <commentary>ADR creation</commentary>
+  assistant: "I'll write an ADR with context, alternatives, decision, and consequences."
   </example>
 model: sonnet
 color: cyan
-triggers:
-  - readme
-  - documentation
-  - document
-  - adr
-  - architecture decision record
-  - data dictionary
-  - runbook
-  - playbook
-  - technical spec
-  - docstring
-  - mkdocs
-  - sphinx
-  - openapi
-  - swagger
-  - mermaid diagram
-  - api documentation
-  - api docs
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__notion
 permissionMode: acceptEdits
 ---

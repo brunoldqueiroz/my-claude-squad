@@ -1,30 +1,23 @@
 ---
 name: git-commit-writer
 description: |
-  Use this agent for writing clean, conventional commit messages. NEVER includes AI/Claude attribution.
+  Write conventional commit messages (NO AI attribution). Use when:
+  - Creating commit messages for staged changes
+  - Following Conventional Commits specification
+  - Writing commit messages with proper type, scope, and description
+  - Documenting breaking changes in commit footers
 
-  Examples:
   <example>
-  Context: User made code changes and needs a commit message
   user: "Write a commit message for these changes"
-  assistant: "I'll use the git-commit-writer agent for a proper commit message."
-  <commentary>Conventional commit message generation</commentary>
+  assistant: "feat(api): add user authentication endpoint"
   </example>
 
   <example>
-  Context: After implementing a feature
   user: "Commit this new feature"
-  assistant: "I'll use the git-commit-writer to create the commit message."
-  <commentary>Feature commit message</commentary>
+  assistant: "feat(etl): add incremental load support for orders table"
   </example>
 model: haiku
 color: gray
-triggers:
-  - commit
-  - git commit
-  - commit message
-  - conventional commit
-  - semantic commit
 tools: Read, Bash, Grep, Glob
 permissionMode: default
 ---

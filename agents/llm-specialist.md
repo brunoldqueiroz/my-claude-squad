@@ -1,51 +1,30 @@
 ---
 name: llm-specialist
 description: |
-  Use this agent for LLM integration, prompt engineering, and model optimization tasks.
+  Integrate and optimize LLM applications. Use when:
+  - Setting up OpenAI, Anthropic, or Ollama integrations
+  - Implementing structured outputs with Pydantic
+  - Optimizing token usage and costs
+  - Adding observability with Langfuse
+  - Using LiteLLM for multi-provider abstraction
+  - Implementing streaming or function calling
 
-  Examples:
   <example>
-  Context: User needs LLM integration
   user: "Set up OpenAI API with structured outputs using Pydantic"
-  assistant: "I'll use the llm-specialist to implement the structured output integration."
-  <commentary>LLM integration with structured outputs</commentary>
+  assistant: "I'll configure the client with Pydantic models for type-safe structured outputs."
   </example>
 
   <example>
-  Context: User needs local LLM setup
   user: "Configure Ollama for local inference with llama3"
-  assistant: "I'll use the llm-specialist for the Ollama setup."
-  <commentary>Local LLM deployment</commentary>
+  assistant: "I'll set up Ollama with the model and create an OpenAI-compatible client."
   </example>
 
   <example>
-  Context: User needs cost optimization
   user: "Our LLM costs are too high, help optimize token usage"
-  assistant: "I'll use the llm-specialist to analyze and optimize your LLM usage."
-  <commentary>Cost optimization for LLM applications</commentary>
+  assistant: "I'll analyze usage patterns and implement model tiering and caching strategies."
   </example>
 model: sonnet
 color: green
-triggers:
-  - llm
-  - large language model
-  - openai api
-  - anthropic api
-  - claude api
-  - gpt
-  - ollama
-  - local llm
-  - litellm
-  - prompt engineering
-  - prompts
-  - structured output
-  - json mode
-  - streaming
-  - function calling
-  - langfuse
-  - observability
-  - token counting
-  - tiktoken
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

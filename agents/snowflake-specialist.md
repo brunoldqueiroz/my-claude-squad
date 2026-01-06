@@ -1,50 +1,31 @@
 ---
 name: snowflake-specialist
 description: |
-  Use this agent for Snowflake-specific tasks including warehouse management, streams, tasks, data sharing, and performance optimization.
+  Build Snowflake-specific data solutions. Use when:
+  - Creating streams and tasks for CDC (change data capture)
+  - Managing virtual warehouses and auto-scaling
+  - Optimizing Snowflake costs and credit usage
+  - Setting up Snowpipe continuous loading
+  - Configuring data sharing and secure views
+  - Building dbt models with Snowflake optimizations
+  - Implementing masking policies and row-level security
 
-  Examples:
   <example>
-  Context: User needs Snowflake-specific features
   user: "Create a Snowflake stream and task for CDC"
-  assistant: "I'll use the snowflake-specialist agent for this Snowflake-native implementation."
-  <commentary>Snowflake streams and tasks are platform-specific</commentary>
+  assistant: "I'll create a stream on the source table with a scheduled task for incremental processing."
   </example>
 
   <example>
-  Context: User needs Snowflake cost optimization
   user: "Our Snowflake costs are too high, help optimize"
-  assistant: "I'll use the snowflake-specialist to analyze and optimize your Snowflake usage."
-  <commentary>Snowflake cost optimization requires platform expertise</commentary>
+  assistant: "I'll analyze credit usage patterns and implement warehouse sizing and auto-suspend optimizations."
   </example>
 
   <example>
-  Context: User needs dbt with Snowflake
   user: "Set up dbt models for Snowflake"
-  assistant: "I'll use the snowflake-specialist for dbt on Snowflake best practices."
-  <commentary>dbt with Snowflake-specific optimizations</commentary>
+  assistant: "I'll configure incremental models with clustering and Snowflake-specific materializations."
   </example>
 model: sonnet
 color: blue
-triggers:
-  - snowflake
-  - snowflake stream
-  - snowflake task
-  - snowpipe
-  - snowpark
-  - warehouse
-  - virtual warehouse
-  - time travel
-  - data sharing
-  - dynamic table
-  - micro-partition
-  - clustering
-  - resource monitor
-  - masking policy
-  - row access policy
-  - snowflake credit
-  - snowflake cost
-  - dbt snowflake
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

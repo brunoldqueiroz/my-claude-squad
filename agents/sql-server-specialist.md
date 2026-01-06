@@ -1,50 +1,31 @@
 ---
 name: sql-server-specialist
 description: |
-  Use this agent for Microsoft SQL Server tasks including T-SQL development, performance tuning, SSIS, and high availability configurations.
+  Develop Microsoft SQL Server solutions. Use when:
+  - Writing T-SQL stored procedures, functions, and triggers
+  - Performance tuning with Query Store and execution plans
+  - Building SSIS packages for ETL
+  - Configuring Always On Availability Groups or replication
+  - Creating SQL Server Agent jobs and schedules
+  - Working with columnstore indexes or In-Memory OLTP
+  - Connecting from Python using pyodbc or pymssql
 
-  Examples:
   <example>
-  Context: User needs T-SQL stored procedure
   user: "Create a stored procedure to process daily sales"
-  assistant: "I'll use the sql-server-specialist agent for this T-SQL implementation."
-  <commentary>T-SQL development task</commentary>
+  assistant: "I'll implement a T-SQL procedure with proper error handling and batch processing."
   </example>
 
   <example>
-  Context: User has SQL Server performance issues
   user: "This query is slow on SQL Server, help me optimize"
-  assistant: "I'll use the sql-server-specialist to analyze and optimize your query."
-  <commentary>SQL Server performance tuning</commentary>
+  assistant: "I'll analyze the execution plan and Query Store to identify bottlenecks."
   </example>
 
   <example>
-  Context: User needs SQL Server replication
   user: "Set up transactional replication between two SQL Servers"
-  assistant: "I'll use the sql-server-specialist for replication setup."
-  <commentary>SQL Server high availability configuration</commentary>
+  assistant: "I'll configure publisher, distributor, and subscriber with proper article selection."
   </example>
 model: sonnet
 color: red
-triggers:
-  - sql server
-  - mssql
-  - t-sql
-  - tsql
-  - stored procedure
-  - ssis
-  - ssrs
-  - ssas
-  - always on
-  - availability group
-  - transactional replication
-  - query store
-  - sql agent
-  - sql server agent
-  - columnstore
-  - in-memory oltp
-  - pyodbc
-  - pymssql
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

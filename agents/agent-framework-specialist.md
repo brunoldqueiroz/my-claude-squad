@@ -1,46 +1,29 @@
 ---
 name: agent-framework-specialist
 description: |
-  Use this agent for multi-agent systems and AI agent frameworks like LangGraph, CrewAI, AutoGen, and OpenAI Swarm.
+  Build multi-agent AI systems. Use when:
+  - Creating LangGraph workflows with conditional logic and cycles
+  - Building CrewAI teams with role-based agents
+  - Setting up AutoGen conversational agents
+  - Implementing agent tools and function calling
+  - Managing agent memory and state persistence
 
-  Examples:
   <example>
-  Context: User needs a multi-agent workflow
   user: "Create a LangGraph workflow for research and writing"
-  assistant: "I'll use the agent-framework-specialist to build the LangGraph workflow."
-  <commentary>LangGraph implementation for multi-step agent workflow</commentary>
+  assistant: "I'll build a graph-based workflow with state management and conditional edges."
   </example>
 
   <example>
-  Context: User needs team-based AI agents
   user: "Build a CrewAI team with researcher, analyst, and writer agents"
-  assistant: "I'll use the agent-framework-specialist for the CrewAI implementation."
-  <commentary>CrewAI multi-agent team setup</commentary>
+  assistant: "I'll create role-based agents with proper task delegation and tools."
   </example>
 
   <example>
-  Context: User needs agent with tools
   user: "Create an agent that can search the web and write to files"
-  assistant: "I'll use the agent-framework-specialist to build the tool-using agent."
-  <commentary>Agent with custom tool integration</commentary>
+  assistant: "I'll implement a tool-using agent with proper input/output schemas."
   </example>
 model: sonnet
 color: teal
-triggers:
-  - multi-agent
-  - multi agent
-  - langgraph
-  - crewai
-  - autogen
-  - openai swarm
-  - swarm
-  - agent framework
-  - agent workflow
-  - agent tools
-  - agent memory
-  - agent orchestration
-  - tool calling
-  - function calling
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

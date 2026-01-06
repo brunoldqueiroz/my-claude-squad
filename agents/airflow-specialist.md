@@ -1,49 +1,30 @@
 ---
 name: airflow-specialist
 description: |
-  Use this agent for Apache Airflow tasks including DAG development, operators, scheduling, and troubleshooting.
+  Build Apache Airflow workflows and orchestration. Use when:
+  - Creating DAGs for ETL/ELT pipelines
+  - Working with operators, sensors, and XCom
+  - Using TaskFlow API and task groups
+  - Configuring Celery or Kubernetes executors
+  - Deploying to MWAA, Cloud Composer, or Astronomer
+  - Troubleshooting DAG failures and scheduling issues
 
-  Examples:
   <example>
-  Context: User needs an Airflow DAG
   user: "Create an Airflow DAG for daily ETL"
-  assistant: "I'll use the airflow-specialist agent for this DAG implementation."
-  <commentary>Airflow DAG development task</commentary>
+  assistant: "I'll create a DAG with TaskFlow API, proper retries, and error handling."
   </example>
 
   <example>
-  Context: User has DAG issues
   user: "My Airflow DAG keeps failing at this task"
-  assistant: "I'll use the airflow-specialist to diagnose the issue."
-  <commentary>Airflow troubleshooting</commentary>
+  assistant: "I'll analyze the task logs and check for configuration, dependency, or resource issues."
   </example>
 
   <example>
-  Context: User needs Airflow on Kubernetes
   user: "Set up Airflow with KubernetesExecutor"
-  assistant: "I'll use the airflow-specialist for Kubernetes deployment."
-  <commentary>Airflow Kubernetes integration</commentary>
+  assistant: "I'll configure the executor with proper pod templates and resource limits."
   </example>
 model: sonnet
 color: yellow
-triggers:
-  - airflow
-  - dag
-  - airflow dag
-  - operator
-  - sensor
-  - xcom
-  - taskflow
-  - task group
-  - mwaa
-  - cloud composer
-  - astronomer
-  - celery executor
-  - kubernetes executor
-  - airflow scheduler
-  - airflow provider
-  - airflow connection
-  - airflow variable
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

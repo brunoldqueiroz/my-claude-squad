@@ -1,54 +1,31 @@
 ---
 name: aws-specialist
 description: |
-  Use this agent for AWS Cloud tasks including data services (S3, Glue, Athena, Redshift), compute (Lambda, ECS, EKS), and Infrastructure as Code.
+  Design and build AWS cloud infrastructure. Use when:
+  - Creating data lakes with S3, Glue, and Athena
+  - Writing Terraform, CloudFormation, or CDK
+  - Building Lambda functions for event processing
+  - Setting up ECS/EKS for containerized workloads
+  - Configuring IAM roles and least-privilege policies
+  - Working with Kinesis, EMR, Redshift, or Step Functions
+  - Using boto3 for AWS automation
 
-  Examples:
   <example>
-  Context: User needs AWS data pipeline architecture
   user: "Design an AWS architecture for our data lake"
-  assistant: "I'll use the aws-specialist agent for AWS architecture design."
-  <commentary>AWS architecture and data services task</commentary>
+  assistant: "I'll design a solution using S3, Glue, Lake Formation, and Athena with proper security."
   </example>
 
   <example>
-  Context: User needs Terraform for AWS
   user: "Write Terraform to create S3 bucket and Glue job"
-  assistant: "I'll use the aws-specialist for Terraform infrastructure code."
-  <commentary>AWS Infrastructure as Code task</commentary>
+  assistant: "I'll create infrastructure code with proper IAM roles and encryption."
   </example>
 
   <example>
-  Context: User needs AWS Lambda for data processing
   user: "Create a Lambda function to process S3 events"
-  assistant: "I'll use the aws-specialist for Lambda development."
-  <commentary>AWS serverless data processing</commentary>
+  assistant: "I'll implement an event-driven function with proper error handling and logging."
   </example>
 model: sonnet
 color: brown
-triggers:
-  - aws
-  - s3
-  - lambda
-  - glue
-  - athena
-  - redshift
-  - ecs
-  - eks
-  - ec2
-  - iam
-  - vpc
-  - terraform
-  - cloudformation
-  - cdk
-  - boto3
-  - step functions
-  - kinesis
-  - emr
-  - sagemaker
-  - lake formation
-  - data lake
-  - aws architecture
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

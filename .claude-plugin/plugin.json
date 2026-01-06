@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "my-claude-squad",
+  "version": "0.3.0",
+  "description": "A collection of specialist AI agents, skills, and commands for data engineering, AI engineering, and DevOps workflows in Claude Code",
+  "author": "bruno",
+  "repository": "https://github.com/bruno/my-claude-squad",
+  "license": "MIT",
+
+  "agents": {
+    "directory": "agents/",
+    "count": 17,
+    "items": [
+      {
+        "name": "python-developer",
+        "model": "sonnet",
+        "domain": "data-engineering"
+      },
+      {
+        "name": "sql-specialist",
+        "model": "sonnet",
+        "domain": "data-engineering"
+      },
+      {
+        "name": "spark-specialist",
+        "model": "sonnet",
+        "domain": "data-engineering"
+      },
+      {
+        "name": "snowflake-specialist",
+        "model": "sonnet",
+        "domain": "data-engineering"
+      },
+      {
+        "name": "sql-server-specialist",
+        "model": "sonnet",
+        "domain": "data-engineering"
+      },
+      {
+        "name": "airflow-specialist",
+        "model": "sonnet",
+        "domain": "data-engineering"
+      },
+      {
+        "name": "aws-specialist",
+        "model": "sonnet",
+        "domain": "devops"
+      },
+      {
+        "name": "container-specialist",
+        "model": "sonnet",
+        "domain": "devops"
+      },
+      {
+        "name": "kubernetes-specialist",
+        "model": "sonnet",
+        "domain": "devops"
+      },
+      {
+        "name": "documenter",
+        "model": "sonnet",
+        "domain": "documentation"
+      },
+      {
+        "name": "git-commit-writer",
+        "model": "haiku",
+        "domain": "documentation"
+      },
+      {
+        "name": "rag-specialist",
+        "model": "sonnet",
+        "domain": "ai-engineering"
+      },
+      {
+        "name": "agent-framework-specialist",
+        "model": "sonnet",
+        "domain": "ai-engineering"
+      },
+      {
+        "name": "llm-specialist",
+        "model": "sonnet",
+        "domain": "ai-engineering"
+      },
+      {
+        "name": "automation-specialist",
+        "model": "sonnet",
+        "domain": "ai-engineering"
+      },
+      {
+        "name": "plugin-developer",
+        "model": "sonnet",
+        "domain": "plugin-development"
+      },
+      {
+        "name": "squad-orchestrator",
+        "model": "opus",
+        "domain": "orchestration"
+      }
+    ]
+  },
+
+  "commands": {
+    "directory": "commands/",
+    "count": 30,
+    "categories": [
+      {
+        "name": "orchestration",
+        "commands": ["plan-task", "execute-squad", "status"]
+      },
+      {
+        "name": "data-engineering",
+        "commands": ["create-pipeline", "analyze-data", "optimize-query"]
+      },
+      {
+        "name": "devops",
+        "commands": ["containerize", "k8s-manifest", "deploy"]
+      },
+      {
+        "name": "documentation",
+        "commands": ["commit", "doc-api", "doc-pipeline"]
+      },
+      {
+        "name": "research",
+        "commands": ["lookup-docs"]
+      },
+      {
+        "name": "ai-engineering",
+        "commands": ["create-rag", "create-agent", "create-chatbot", "create-mcp-server", "optimize-rag"]
+      },
+      {
+        "name": "plugin-development",
+        "commands": [
+          "new-agent", "new-skill", "new-command", "list-commands",
+          "validate-plugin", "list-agents", "update-readme", "plugin-status",
+          "add-tests", "audit-plugin", "improve-agent", "improve-routing"
+        ]
+      }
+    ]
+  },
+
+  "skills": {
+    "directory": "skills/",
+    "count": 10,
+    "items": [
+      {
+        "name": "data-pipeline-patterns",
+        "topic": "ETL/ELT design patterns"
+      },
+      {
+        "name": "sql-optimization",
+        "topic": "Query optimization techniques"
+      },
+      {
+        "name": "cloud-architecture",
+        "topic": "Cloud data platform patterns"
+      },
+      {
+        "name": "testing-strategies",
+        "topic": "Data pipeline testing"
+      },
+      {
+        "name": "documentation-templates",
+        "topic": "Documentation patterns"
+      },
+      {
+        "name": "code-review-standards",
+        "topic": "Code review checklists"
+      },
+      {
+        "name": "research-patterns",
+        "topic": "Research-first protocols"
+      },
+      {
+        "name": "plugin-development-patterns",
+        "topic": "Plugin extension patterns"
+      },
+      {
+        "name": "self-improvement-patterns",
+        "topic": "Plugin audit and improvement"
+      }
+    ]
+  },
+
+  "mcpServers": {
+    "recommended": [
+      {
+        "name": "memory",
+        "package": "@modelcontextprotocol/server-memory",
+        "purpose": "Knowledge graph storage"
+      },
+      {
+        "name": "context7",
+        "package": "@upstash/context7-mcp",
+        "purpose": "Library documentation lookup"
+      },
+      {
+        "name": "exa",
+        "package": "exa-mcp",
+        "purpose": "Code search and web search"
+      },
+      {
+        "name": "qdrant",
+        "package": "mcp-server-qdrant",
+        "purpose": "Vector search for semantic memory"
+      },
+      {
+        "name": "notion",
+        "package": "@notionhq/notion-mcp",
+        "purpose": "Documentation and knowledge base"
+      }
+    ]
+  },
+
+  "patterns": {
+    "agentDescription": "Action-oriented with 'Use when:' bullet points and examples",
+    "researchFirst": "All agents use Context7/Exa before implementation",
+    "contextResilience": "Checkpoint summaries for long tasks",
+    "memoryIntegration": "TodoWrite for task tracking"
+  }
+}

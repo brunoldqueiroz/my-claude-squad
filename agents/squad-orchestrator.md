@@ -1,50 +1,29 @@
 ---
 name: squad-orchestrator
 description: |
-  Use this agent for complex tasks requiring multiple specialists across Data Engineering, AI Engineering, Plugin Development, or Self-Improvement. It decomposes tasks, coordinates specialists, and manages execution.
+  Coordinate complex multi-specialist tasks. Use when:
+  - Tasks require 3+ different specialists
+  - Cross-domain work (Data + AI + DevOps)
+  - Creating execution plans with dependencies
+  - Auditing or improving the plugin itself
+  - Designing new agent domains
 
-  Examples:
   <example>
-  Context: Complex data engineering project
   user: "Create a data pipeline from Snowflake to SQL Server with Airflow scheduling"
-  assistant: "I'll use the squad-orchestrator to coordinate snowflake, sql-server, airflow, and python specialists."
-  <commentary>Multi-specialist data task requiring orchestration</commentary>
+  assistant: "I'll create an execution plan coordinating snowflake, sql-server, airflow, and python specialists."
   </example>
 
   <example>
-  Context: AI engineering project
   user: "Build a RAG chatbot with document ingestion and a multi-agent backend"
-  assistant: "I'll use the squad-orchestrator to plan this AI system with RAG and agent specialists."
-  <commentary>Complex AI task requiring multiple specialists</commentary>
+  assistant: "I'll plan this with rag-specialist, agent-framework-specialist, and automation-specialist."
   </example>
 
   <example>
-  Context: Plugin extension
-  user: "Add ML Ops agents for model training, deployment, and monitoring"
-  assistant: "I'll use the squad-orchestrator to design the new domain."
-  <commentary>Plugin domain design requiring coordinated planning</commentary>
-  </example>
-
-  <example>
-  Context: Self-improvement
   user: "Audit this plugin and improve the routing algorithm"
-  assistant: "I'll use the squad-orchestrator to analyze the codebase and coordinate improvements."
-  <commentary>Plugin self-improvement requiring analysis and implementation</commentary>
+  assistant: "I'll analyze the codebase, identify issues, and coordinate improvement implementation."
   </example>
 model: opus
 color: blue
-triggers:
-  - orchestrate
-  - coordinate
-  - complex task
-  - multi-specialist
-  - multiple agents
-  - decompose task
-  - task decomposition
-  - plan implementation
-  - cross-domain
-  - self-improvement
-  - audit plugin
 tools: Read, Edit, Write, Bash, Grep, Glob, Task, WebFetch, WebSearch, mcp__exa, mcp__upstash-context7-mcp, mcp__notion, mcp__memory, mcp__qdrant
 permissionMode: acceptEdits
 ---

@@ -1,54 +1,29 @@
 ---
 name: rag-specialist
 description: |
-  Use this agent for RAG (Retrieval-Augmented Generation) applications, vector databases, and knowledge base implementations.
+  Build RAG systems and vector search applications. Use when:
+  - Setting up vector databases (Qdrant, ChromaDB, Pinecone, Weaviate)
+  - Implementing semantic search or hybrid search
+  - Building document Q&A systems with LlamaIndex or LangChain
+  - Optimizing RAG accuracy with chunking, reranking, or embeddings
+  - Creating knowledge bases from documents
 
-  Examples:
   <example>
-  Context: User needs document Q&A system
   user: "Set up a RAG system for our company documents using Qdrant"
-  assistant: "I'll use the rag-specialist agent to design and implement the RAG pipeline."
-  <commentary>RAG implementation with specific vector database</commentary>
+  assistant: "I'll build a RAG pipeline with document chunking, embeddings, and retrieval."
   </example>
 
   <example>
-  Context: User needs semantic search
   user: "Implement semantic search over our product catalog with ChromaDB"
-  assistant: "I'll use the rag-specialist for the vector search implementation."
-  <commentary>Semantic search implementation</commentary>
+  assistant: "I'll create a vector search system with proper metadata filtering."
   </example>
 
   <example>
-  Context: User needs to optimize existing RAG
   user: "Our RAG system has low accuracy, can you help improve it?"
-  assistant: "I'll use the rag-specialist to analyze and optimize your RAG pipeline."
-  <commentary>RAG optimization and debugging</commentary>
+  assistant: "I'll analyze chunking, embeddings, and retrieval strategy to improve accuracy."
   </example>
 model: sonnet
 color: purple
-triggers:
-  - rag
-  - retrieval augmented generation
-  - vector database
-  - vectordb
-  - chromadb
-  - chroma
-  - qdrant
-  - weaviate
-  - pinecone
-  - pgvector
-  - milvus
-  - faiss
-  - embedding
-  - embeddings
-  - semantic search
-  - llamaindex
-  - llama index
-  - langchain retriever
-  - chunking
-  - reranking
-  - hybrid search
-  - knowledge base
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp, mcp__qdrant
 permissionMode: acceptEdits
 ---

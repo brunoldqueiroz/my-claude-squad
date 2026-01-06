@@ -39,6 +39,9 @@ ENV/
 # Swarm data (contains runtime state)
 .swarm/
 
+# Session checkpoints (local state)
+.checkpoints/
+
 # Testing
 .pytest_cache/
 .coverage

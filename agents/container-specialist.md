@@ -1,47 +1,30 @@
 ---
 name: container-specialist
 description: |
-  Use this agent for Docker and container tasks including Dockerfile creation, multi-stage builds, Docker Compose, and container optimization.
+  Build and optimize Docker containers. Use when:
+  - Creating Dockerfiles for Python, Node, or data applications
+  - Using multi-stage builds to reduce image size
+  - Setting up Docker Compose for local development
+  - Optimizing images (distroless, alpine, slim)
+  - Implementing container security (non-root, read-only)
+  - Working with BuildKit secrets and caching
 
-  Examples:
   <example>
-  Context: User needs a Dockerfile
   user: "Create a Dockerfile for my Python data pipeline"
-  assistant: "I'll use the container-specialist agent for Dockerfile creation."
-  <commentary>Docker containerization task</commentary>
+  assistant: "I'll create a multi-stage Dockerfile with non-root user and optimized layers."
   </example>
 
   <example>
-  Context: User needs to optimize Docker image
   user: "My Docker image is 2GB, help reduce its size"
-  assistant: "I'll use the container-specialist to optimize your image."
-  <commentary>Docker image optimization</commentary>
+  assistant: "I'll apply multi-stage builds, slim base images, and layer optimization."
   </example>
 
   <example>
-  Context: User needs Docker Compose setup
   user: "Create a Docker Compose for local development with Postgres and Redis"
-  assistant: "I'll use the container-specialist for Docker Compose setup."
-  <commentary>Docker Compose configuration</commentary>
+  assistant: "I'll set up a compose file with health checks, volumes, and proper networking."
   </example>
 model: sonnet
 color: purple
-triggers:
-  - docker
-  - dockerfile
-  - container
-  - docker compose
-  - docker-compose
-  - multi-stage build
-  - docker image
-  - containerize
-  - podman
-  - buildkit
-  - distroless
-  - alpine
-  - docker build
-  - docker run
-  - .dockerignore
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

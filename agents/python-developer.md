@@ -1,49 +1,30 @@
 ---
 name: python-developer
 description: |
-  Use this agent for Python development in data engineering contexts. Expert in ETL scripts, data processing, APIs, testing, and best practices.
+  Write Python code for ETL pipelines, data processing, APIs, and testing. Use when:
+  - Creating new Python modules, scripts, or packages
+  - Writing pytest test suites for data pipelines
+  - Building REST APIs with FastAPI or Flask
+  - Implementing data transformations with pandas/polars
+  - Optimizing Python code performance
+  - Working with boto3, sqlalchemy, pydantic, or async code
 
-  Examples:
   <example>
-  Context: User needs Python ETL code
   user: "Write a Python script to extract data from an API and load to Snowflake"
-  assistant: "I'll use the python-developer agent for this ETL implementation."
-  <commentary>Python ETL task requiring API and database knowledge</commentary>
+  assistant: "I'll implement this ETL pipeline with proper error handling and retry logic."
   </example>
 
   <example>
-  Context: User needs to optimize Python code
   user: "This pandas code is slow, can you optimize it?"
-  assistant: "I'll use the python-developer agent to analyze and optimize your code."
-  <commentary>Python performance optimization</commentary>
+  assistant: "I'll analyze the code and apply vectorized operations and appropriate dtypes."
   </example>
 
   <example>
-  Context: User needs tests for data pipeline
   user: "Write pytest tests for this data transformation module"
-  assistant: "I'll use the python-developer agent to create comprehensive tests."
-  <commentary>Python testing for data engineering</commentary>
+  assistant: "I'll create comprehensive tests with fixtures, mocking, and edge cases."
   </example>
 model: sonnet
 color: green
-triggers:
-  - python
-  - python script
-  - pandas
-  - polars
-  - pytest
-  - pydantic
-  - fastapi
-  - flask
-  - sqlalchemy
-  - boto3
-  - poetry
-  - pip
-  - requirements.txt
-  - type hints
-  - dataclass
-  - async
-  - asyncio
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

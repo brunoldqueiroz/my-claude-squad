@@ -30,10 +30,11 @@ Every agent file must include:
 
 1. **YAML Frontmatter**
    - `name:` - Agent identifier
-   - `description:` - With `<example>` tags
+   - `description:` - With action-oriented "Use when:" bullet points and `<example>` tags
    - `model:` - opus, sonnet, or haiku
    - `color:` - Unique color assignment
-   - `triggers:` - Keyword list for routing
+   - `tools:` - Available tools for the agent
+   - `permissionMode:` - Permission level (acceptEdits, etc.)
 
 2. **Core Expertise** - Domain knowledge tables and patterns
 

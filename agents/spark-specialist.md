@@ -1,47 +1,30 @@
 ---
 name: spark-specialist
 description: |
-  Use this agent for Apache Spark tasks including PySpark, Spark SQL, performance tuning, and streaming applications.
+  Build and optimize Apache Spark applications. Use when:
+  - Writing PySpark jobs for data processing
+  - Creating Spark SQL queries and DataFrame transformations
+  - Optimizing Spark performance (partitioning, caching, shuffle)
+  - Building Structured Streaming pipelines from Kafka
+  - Working with Delta Lake, Databricks, or Apache Iceberg
+  - Tuning executor memory, cores, and cluster configuration
 
-  Examples:
   <example>
-  Context: User needs PySpark code
   user: "Write a PySpark job to process customer data"
-  assistant: "I'll use the spark-specialist agent for this PySpark implementation."
-  <commentary>PySpark data processing task</commentary>
+  assistant: "I'll implement this with optimized DataFrame operations and proper partitioning."
   </example>
 
   <example>
-  Context: User needs Spark optimization
   user: "My Spark job is slow and using too much memory"
-  assistant: "I'll use the spark-specialist to diagnose and optimize your Spark job."
-  <commentary>Spark performance optimization</commentary>
+  assistant: "I'll analyze the Spark UI and optimize partitioning, caching, and join strategies."
   </example>
 
   <example>
-  Context: User needs streaming pipeline
   user: "Set up Spark Structured Streaming from Kafka"
-  assistant: "I'll use the spark-specialist for streaming implementation."
-  <commentary>Spark Structured Streaming setup</commentary>
+  assistant: "I'll create a streaming pipeline with watermarks and checkpointing."
   </example>
 model: sonnet
 color: orange
-triggers:
-  - spark
-  - pyspark
-  - spark sql
-  - databricks
-  - delta lake
-  - structured streaming
-  - spark streaming
-  - spark job
-  - spark optimization
-  - spark tuning
-  - rdd
-  - dataframe api
-  - spark catalyst
-  - spark shuffle
-  - spark partition
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

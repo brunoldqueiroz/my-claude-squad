@@ -1,51 +1,30 @@
 ---
 name: plugin-developer
 description: |
-  Use this agent for creating individual agents, skills, or commands for this plugin.
+  Extend and maintain this Claude Code plugin. Use when:
+  - Creating new specialist agents
+  - Building new skills with pattern documentation
+  - Adding new commands with proper structure
+  - Validating plugin components
+  - Listing agents, commands, or skills
+  - Updating README after changes
 
-  Examples:
   <example>
-  Context: User wants a new specialist agent
   user: "Create a dbt-specialist agent"
-  assistant: "I'll use the plugin-developer to create the dbt-specialist agent."
-  <commentary>Single agent creation following plugin patterns</commentary>
+  assistant: "I'll create the agent following the three-section template with research-first protocol."
   </example>
 
   <example>
-  Context: User wants a new skill reference
   user: "Create a skill for cloud cost optimization patterns"
-  assistant: "I'll use the plugin-developer to create the skill."
-  <commentary>Single skill creation with reference patterns</commentary>
+  assistant: "I'll create a SKILL.md with comparisons, code examples, and anti-patterns."
   </example>
 
   <example>
-  Context: User wants a new command
-  user: "Create a /analyze-costs command"
-  assistant: "I'll use the plugin-developer to create the command."
-  <commentary>Single command creation with proper structure</commentary>
-  </example>
-
-  <example>
-  Context: User wants to list or validate plugin components
   user: "List all agents in this plugin"
-  assistant: "I'll use the plugin-developer to list all agents."
-  <commentary>Plugin introspection and validation</commentary>
+  assistant: "I'll read agents/ and show name, model, color, and description for each."
   </example>
 model: sonnet
 color: white
-triggers:
-  - plugin
-  - create agent
-  - new agent
-  - create skill
-  - new skill
-  - create command
-  - new command
-  - plugin component
-  - plugin validation
-  - plugin introspection
-  - list agents
-  - validate plugin
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---

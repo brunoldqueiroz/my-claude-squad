@@ -1,55 +1,30 @@
 ---
 name: kubernetes-specialist
 description: |
-  Use this agent for Kubernetes tasks including manifests, Helm charts, operators, and cluster management for data workloads.
+  Deploy and manage Kubernetes workloads. Use when:
+  - Creating Deployments, StatefulSets, Jobs, and CronJobs
+  - Building Helm charts with proper templating
+  - Configuring HPA, PDB, and resource limits
+  - Setting up Ingress, Services, and networking
+  - Working with EKS, GKE, or AKS cloud Kubernetes
+  - Troubleshooting pod failures (OOMKilled, CrashLoopBackOff)
 
-  Examples:
   <example>
-  Context: User needs K8s manifests
   user: "Create Kubernetes manifests for my Spark application"
-  assistant: "I'll use the kubernetes-specialist agent for K8s manifest creation."
-  <commentary>Kubernetes manifest development</commentary>
+  assistant: "I'll create manifests with proper RBAC, resource limits, and service accounts."
   </example>
 
   <example>
-  Context: User needs Helm chart
   user: "Create a Helm chart for our data pipeline"
-  assistant: "I'll use the kubernetes-specialist for Helm chart development."
-  <commentary>Helm chart creation</commentary>
+  assistant: "I'll build a chart with configurable values, helpers, and proper templating."
   </example>
 
   <example>
-  Context: User has K8s issues
   user: "My pods keep getting OOMKilled, help troubleshoot"
-  assistant: "I'll use the kubernetes-specialist to diagnose the issue."
-  <commentary>Kubernetes troubleshooting</commentary>
+  assistant: "I'll analyze resource usage and adjust memory limits and requests."
   </example>
 model: sonnet
 color: magenta
-triggers:
-  - kubernetes
-  - k8s
-  - kubectl
-  - helm
-  - helm chart
-  - deployment
-  - statefulset
-  - daemonset
-  - pod
-  - service
-  - ingress
-  - configmap
-  - secret
-  - pvc
-  - persistentvolume
-  - hpa
-  - horizontal pod autoscaler
-  - eks
-  - gke
-  - aks
-  - kustomize
-  - argocd
-  - oomkilled
 tools: Read, Edit, Write, Bash, Grep, Glob, mcp__exa, mcp__upstash-context7-mcp
 permissionMode: acceptEdits
 ---
