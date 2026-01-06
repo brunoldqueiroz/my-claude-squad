@@ -13,8 +13,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **DO NOT implement tasks directly. ALWAYS load the agent first.**
 
-This is not optional. The agents encode domain expertise, best practices, and quality standards that generic implementation will miss.
-
 ### Agent-Task Mapping
 
 | Task Type | Agent | File |
@@ -37,18 +35,6 @@ This is not optional. The agents encode domain expertise, best practices, and qu
 | Plugin agents, skills, commands | plugin-developer | `agents/plugin-developer.md` |
 | Multi-agent task coordination | squad-orchestrator | `agents/squad-orchestrator.md` |
 
-### How to Invoke an Agent
-
-```
-1. Read the agent file: Read agents/python-developer.md
-2. The agent prompt contains:
-   - Core expertise and patterns to follow
-   - Research-first protocol (use Context7, Exa)
-   - Context resilience guidelines
-   - Memory integration instructions
-3. Adopt the persona and complete the task following those patterns
-```
-
 ## Development Commands
 
 ```bash
@@ -61,29 +47,33 @@ uv run pytest tests/test_agents.py -v
 # Run a single test
 uv run pytest tests/test_agents.py::TestAgentFrontmatter::test_has_required_fields -v
 
-# Run tests with coverage
-uv run pytest --cov=tests
-
 # Install dependencies
 uv sync --extra test --extra observability
 ```
 
-## Project Overview
+## Project Structure
 
-A **prompt library** of AI agent templates, skills, and commands for Claude Code.
+A **prompt library** of AI agent templates, skills, and commands.
 
 ```
 my-claude-squad/
-├── agents/           # 17 specialist agent prompts (*.md)
-├── skills/           # 10 skill knowledge bases (*/SKILL.md)
-├── commands/         # 30+ command templates (*/*.md)
+├── agents/           # 17 specialist agent prompts
+├── skills/           # 10 skill knowledge bases (progressive disclosure)
+│   └── */
+│       ├── SKILL.md      # Quick reference (always loaded)
+│       ├── references/   # Detailed docs (on demand)
+│       └── examples/     # Code examples (on demand)
+├── commands/         # 33 command templates with agent assignments
+├── collaboration/    # 4 multi-agent workflow templates
+├── hooks/            # Claude Code event hooks (session-start, stop)
 ├── scripts/          # Langfuse observability hook
+├── .claude-plugin/   # Plugin manifest (plugin.json)
 └── tests/            # Agent validation tests
 ```
 
 ## Command-Agent Assignment
 
-Each command in `commands/` has an `agent` field in its frontmatter specifying which agent should execute it:
+Each command has an `agent` field specifying which agent should execute it:
 
 ```yaml
 ---
@@ -92,7 +82,13 @@ agent: python-developer
 ---
 ```
 
-When executing a command, **always read and adopt the assigned agent first**.
+## Collaboration Templates
+
+For complex multi-agent tasks, use templates in `collaboration/`:
+- `data-pipeline-build.md` - ETL with sql → python → airflow → docs
+- `full-stack-feature.md` - API with python → aws → container → k8s
+- `code-review-cycle.md` - Iterative review loop
+- `migration-project.md` - Database/platform migrations
 
 ## Critical Rules
 
@@ -110,17 +106,8 @@ All agents verify knowledge before acting:
 
 ## Langfuse Observability
 
-Session logging is configured via `.claude/settings.json`. Credentials are in `.env`.
+Session logging is configured via `.claude/settings.json`. See README.md for setup.
 
 ```bash
-# Set up credentials
-cp .env.example .env
-# Edit .env with your Langfuse keys
+cp .env.example .env  # Edit with your Langfuse keys
 ```
-
-## MCP Servers
-
-See README.md for full list. Key servers:
-- **context7** - Library documentation lookup
-- **exa** - Web search and code context
-- **memory** - Knowledge graph storage
