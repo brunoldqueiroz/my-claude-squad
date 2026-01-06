@@ -67,7 +67,6 @@ my-claude-squad/
 ├── collaboration/    # 4 multi-agent workflow templates
 ├── hooks/            # Claude Code event hooks (session-start, stop)
 ├── scripts/          # Langfuse observability hook
-├── .claude-plugin/   # Plugin manifest (plugin.json)
 └── tests/            # Agent validation tests
 ```
 
