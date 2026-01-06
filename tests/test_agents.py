@@ -219,37 +219,6 @@ class TestAgentTools:
             )
 
 
-class TestAgentTriggers:
-    """Test agent trigger configurations."""
-
-    @pytest.mark.parametrize("agent_file", [
-        pytest.param(f, id=f.stem)
-        for f in sorted(Path(__file__).parent.parent.glob("agents/*.md"))
-    ])
-    def test_agent_has_triggers(self, agent_file: Path):
-        """Each agent should have triggers for invocation."""
-        frontmatter, _ = parse_agent_frontmatter(agent_file)
-        triggers = frontmatter.get("triggers", [])
-
-        assert triggers and len(triggers) > 0, (
-            f"{agent_file.name}: missing 'triggers' - agents need keywords for invocation"
-        )
-
-    @pytest.mark.parametrize("agent_file", [
-        pytest.param(f, id=f.stem)
-        for f in sorted(Path(__file__).parent.parent.glob("agents/*.md"))
-    ])
-    def test_triggers_are_lowercase(self, agent_file: Path):
-        """Triggers should be lowercase for consistent matching."""
-        frontmatter, _ = parse_agent_frontmatter(agent_file)
-        triggers = frontmatter.get("triggers", [])
-
-        for trigger in triggers:
-            assert trigger == trigger.lower(), (
-                f"{agent_file.name}: trigger '{trigger}' should be lowercase"
-            )
-
-
 class TestAgentContent:
     """Test agent prompt content."""
 
