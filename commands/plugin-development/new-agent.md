@@ -1,6 +1,7 @@
 ---
 name: new-agent
 description: Create a new specialist agent for the plugin
+agent: plugin-developer
 arguments:
   - name: name
     description: Agent name (lowercase-hyphenated, e.g., dbt-specialist)

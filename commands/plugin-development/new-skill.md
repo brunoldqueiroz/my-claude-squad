@@ -1,6 +1,7 @@
 ---
 name: new-skill
 description: Create a new SKILL.md reference for the plugin
+agent: plugin-developer
 arguments:
   - name: name
     description: Skill name (lowercase-hyphenated, e.g., cicd-patterns)

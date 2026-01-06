@@ -1,5 +1,6 @@
 ---
 description: Generate a conventional commit message for staged changes (NO AI attribution)
+agent: git-commit-writer
 ---
 
 # Commit

@@ -1,5 +1,6 @@
 ---
 description: Show current task status and agent progress
+agent: squad-orchestrator
 ---
 
 # Status

@@ -1,6 +1,7 @@
 ---
 name: validate-plugin
 description: Validate plugin structure and all files
+agent: plugin-developer
 arguments: []
 ---
 

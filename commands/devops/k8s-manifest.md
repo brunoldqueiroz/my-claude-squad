@@ -1,6 +1,7 @@
 ---
 description: Generate Kubernetes manifests for an application
 argument-hint: <application name> [options]
+agent: kubernetes-specialist
 ---
 
 # K8s Manifest

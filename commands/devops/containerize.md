@@ -1,6 +1,7 @@
 ---
 description: Create optimized Dockerfile for a project
 argument-hint: [project path]
+agent: container-specialist
 ---
 
 # Containerize

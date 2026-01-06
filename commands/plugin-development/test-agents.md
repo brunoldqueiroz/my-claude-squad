@@ -1,3 +1,8 @@
+---
+description: Run the agent test suite to validate all agent configurations
+agent: plugin-developer
+---
+
 # Test Agents
 
 Run the agent test suite to validate all agent configurations.

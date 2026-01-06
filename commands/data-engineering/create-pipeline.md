@@ -1,6 +1,7 @@
 ---
 description: Generate data pipeline boilerplate for ETL/ELT workflows
 argument-hint: <source> to <target> [options]
+agent: python-developer
 ---
 
 # Create Pipeline

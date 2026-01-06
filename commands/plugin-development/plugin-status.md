@@ -1,6 +1,7 @@
 ---
 name: plugin-status
 description: Show plugin statistics and health
+agent: plugin-developer
 arguments: []
 ---
 

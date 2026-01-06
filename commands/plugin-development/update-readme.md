@@ -1,6 +1,7 @@
 ---
 name: update-readme
 description: Regenerate README.md from current plugin state
+agent: plugin-developer
 arguments: []
 ---
 

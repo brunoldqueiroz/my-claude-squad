@@ -1,6 +1,7 @@
 ---
 description: Look up documentation for any library, framework, or tool using Context7 and Exa
 argument-hint: <library or topic>
+agent: llm-specialist
 ---
 
 # Lookup Docs

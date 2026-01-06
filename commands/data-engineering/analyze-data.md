@@ -1,6 +1,7 @@
 ---
 description: Profile and analyze a dataset for quality and patterns
 argument-hint: <file path or table name>
+agent: python-developer
 ---
 
 # Analyze Data

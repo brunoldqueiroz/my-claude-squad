@@ -1,6 +1,7 @@
 ---
 name: create-agent
 description: Generate multi-agent system boilerplate
+agent: agent-framework-specialist
 arguments:
   - name: name
     description: Name of the agent system

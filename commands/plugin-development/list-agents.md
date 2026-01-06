@@ -1,6 +1,7 @@
 ---
 name: list-agents
 description: List all agents in the plugin with descriptions and models
+agent: plugin-developer
 arguments: []
 ---
 

@@ -1,6 +1,7 @@
 ---
 description: Generate deployment configuration for data applications
 argument-hint: <application> to <environment>
+agent: kubernetes-specialist
 ---
 
 # Deploy

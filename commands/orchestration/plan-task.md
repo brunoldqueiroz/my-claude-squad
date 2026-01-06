@@ -1,6 +1,7 @@
 ---
 description: Analyze a complex task and create an execution plan with agent assignments
 argument-hint: <task description>
+agent: squad-orchestrator
 ---
 
 # Plan Task

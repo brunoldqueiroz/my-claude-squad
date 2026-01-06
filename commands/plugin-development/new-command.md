@@ -1,6 +1,7 @@
 ---
 name: new-command
 description: Create a new slash command for the plugin
+agent: plugin-developer
 arguments:
   - name: name
     description: Command name (e.g., analyze-costs)

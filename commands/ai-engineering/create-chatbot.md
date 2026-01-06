@@ -1,6 +1,7 @@
 ---
 name: create-chatbot
 description: Generate chatbot application boilerplate
+agent: automation-specialist
 arguments:
   - name: name
     description: Name of the chatbot

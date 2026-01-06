@@ -1,6 +1,7 @@
 ---
 name: create-rag
 description: Generate RAG (Retrieval-Augmented Generation) application boilerplate
+agent: rag-specialist
 arguments:
   - name: name
     description: Name of the RAG application

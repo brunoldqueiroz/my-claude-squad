@@ -1,6 +1,7 @@
 ---
 description: Generate API documentation from code
 argument-hint: [api path or file]
+agent: documenter
 ---
 
 # Document API

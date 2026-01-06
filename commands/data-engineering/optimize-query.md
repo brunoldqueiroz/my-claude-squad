@@ -1,6 +1,7 @@
 ---
 description: Analyze and optimize SQL query performance
 argument-hint: [query or file path]
+agent: sql-specialist
 ---
 
 # Optimize Query

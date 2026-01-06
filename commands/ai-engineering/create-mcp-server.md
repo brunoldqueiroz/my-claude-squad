@@ -1,6 +1,7 @@
 ---
 name: create-mcp-server
 description: Generate MCP (Model Context Protocol) server template
+agent: automation-specialist
 arguments:
   - name: name
     description: Name of the MCP server

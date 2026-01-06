@@ -1,6 +1,7 @@
 ---
 name: optimize-rag
 description: Analyze and optimize an existing RAG pipeline
+agent: rag-specialist
 arguments:
   - name: path
     description: Path to the RAG application or specific file

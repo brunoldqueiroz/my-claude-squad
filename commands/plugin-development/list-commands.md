@@ -1,6 +1,7 @@
 ---
 name: list-commands
 description: List all commands organized by category
+agent: plugin-developer
 arguments:
   - name: category
     description: Filter by category (optional)

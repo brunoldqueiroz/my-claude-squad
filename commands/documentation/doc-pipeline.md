@@ -1,6 +1,7 @@
 ---
 description: Generate comprehensive documentation for a data pipeline
 argument-hint: [pipeline path or name]
+agent: documenter
 ---
 
 # Document Pipeline
