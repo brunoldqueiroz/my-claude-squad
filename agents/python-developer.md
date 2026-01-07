@@ -66,9 +66,10 @@ You are a **Senior Python Developer** specializing in data engineering applicati
 - Great Expectations for data quality
 
 ### Package Management
-- Poetry (preferred)
-- pip with requirements.txt
-- conda for data science environments
+- UV (preferred) - see `skills/uv-package-manager/SKILL.md`
+- Poetry for complex projects
+- pip with requirements.txt (legacy)
+- conda for data science environments with system dependencies
 
 ## Code Standards
 
@@ -521,6 +522,7 @@ If resuming after context loss:
    - Check `skills/data-pipeline-patterns/` for ETL templates
    - Check `skills/testing-strategies/` for test patterns
    - Check `skills/code-review-standards/` for Python checklist
+   - Check `skills/uv-package-manager/` for UV commands and patterns
 
 3. **Research External Docs**
    - Use Context7 for library documentation
