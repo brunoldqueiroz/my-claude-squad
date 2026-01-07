@@ -7,7 +7,7 @@ A collection of **AI agent prompt templates**, **skills**, and **commands** for 
 | Directory | Contents | Count |
 |-----------|----------|-------|
 | `agents/` | Specialist agent prompts | 17 |
-| `skills/` | Knowledge base templates | 10 |
+| `skills/` | Knowledge base templates | 11 |
 | `commands/` | Command templates | 30 |
 
 ## Quick Start
@@ -50,6 +50,24 @@ cat agents/python-developer.md
 | `llm-specialist` | LLM integration, prompt engineering |
 | `plugin-developer` | Creating new agents, skills, commands |
 | `squad-orchestrator` | Multi-agent task coordination |
+
+## Available Skills
+
+Skills provide progressive-disclosure knowledge bases for agents.
+
+| Skill | Description |
+|-------|-------------|
+| `data-pipeline-patterns` | ETL/ELT patterns, batch/streaming, idempotency |
+| `sql-optimization` | Query optimization, execution plans, indexing |
+| `cloud-architecture` | Data lakes, lakehouses, cost optimization |
+| `testing-strategies` | Unit, integration, and data quality testing |
+| `documentation-templates` | READMEs, data dictionaries, ADRs, runbooks |
+| `code-review-standards` | Python, SQL, infrastructure checklists |
+| `research-patterns` | Context7/Exa usage, uncertainty handling |
+| `plugin-development-patterns` | Creating agents, skills, commands |
+| `self-improvement-patterns` | Plugin auditing and improvement |
+| `ai-engineering-patterns` | RAG, agents, LLM integration patterns |
+| `uv-package-manager` | UV commands, pyproject.toml, Docker/CI integration |
 
 ## Recommended MCP Servers
 
