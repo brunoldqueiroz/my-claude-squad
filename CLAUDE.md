@@ -58,7 +58,7 @@ A **prompt library** of AI agent templates, skills, and commands.
 ```
 my-claude-squad/
 ├── agents/           # 17 specialist agent prompts
-├── skills/           # 10 skill knowledge bases (progressive disclosure)
+├── skills/           # 11 skill knowledge bases (progressive disclosure)
 │   └── */
 │       ├── SKILL.md      # Quick reference (always loaded)
 │       ├── references/   # Detailed docs (on demand)
